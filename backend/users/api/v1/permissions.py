@@ -10,5 +10,7 @@ class IsAdminOrModerator(BasePermission):
 
 
 class IsNotBlocked(BasePermission):
+    message = "Your account is blocked"
+
     def has_permission(self, request, view):
-        return not getattr(request.user, "is_blocked", False)
+        return request.user.is_authenticated and not request.user.is_blocked
