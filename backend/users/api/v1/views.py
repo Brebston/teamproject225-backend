@@ -10,7 +10,7 @@ from users.api.v1.serializers import (
     MeSerializer,
     RoleUpdateSerializer,
 )
-from users.api.v1.permissions import IsAdminOrModerator
+from users.api.v1.permissions import IsAdminOrModerator, IsNotBlocked
 from users.services import block_user, change_user_role
 
 
@@ -20,8 +20,8 @@ class UserViewSet(ModelViewSet):
 
     def get_permissions(self):
         if self.action in ["destroy", "block", "change_role"]:
-            return [IsAuthenticated(), IsAdminOrModerator()]
-        return [IsAuthenticated()]
+            return [IsAuthenticated(), IsAdminOrModerator(), IsNotBlocked()]
+        return [IsAuthenticated(), IsAdminUser()]
 
     @action(detail=False, methods=["get"])
     def me(self, request):
