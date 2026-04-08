@@ -1,8 +1,10 @@
 from rest_framework import generics, status
+from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from users.models import User
@@ -90,3 +92,27 @@ class RegisterView(generics.CreateAPIView):
 class LoginView(TokenObtainPairView):
     serializer_class = EmailTokenObtainSerializer
     permission_classes = [AllowAny]
+
+
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            refresh = request.data.get("refresh")
+
+            if not refresh:
+                return Response(
+                    {"error": "Refresh token required"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            token = RefreshToken(refresh)
+            token.blacklist()
+
+            return Response({"detail": "Logged out successfully"})
+
+        except Exception:
+            return Response(
+                {"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST
+            )

@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
-from rest_framework_simplejwt.serializers import TokenObtainSerializer
+from rest_framework_simplejwt.serializers import (
+    TokenObtainPairSerializer,
+)
 
 from users.models import User
 
@@ -32,7 +34,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         return User.objects.create_user(**validated_data)
 
 
-class EmailTokenObtainSerializer(TokenObtainSerializer):
+class EmailTokenObtainSerializer(TokenObtainPairSerializer):
     username_field = User.EMAIL_FIELD
 
     def validate(self, attrs):
