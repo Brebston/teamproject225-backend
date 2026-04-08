@@ -1,14 +1,17 @@
-from rest_framework import status
+from rest_framework import generics, status
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from users.models import User
 from users.api.v1.serializers import (
+    RegisterSerializer,
     UserSerializer,
     MeSerializer,
     RoleUpdateSerializer,
+    EmailTokenObtainSerializer,
 )
 from users.api.v1.permissions import IsAdminOrModerator, IsNotBlocked
 from users.services import block_user, change_user_role
@@ -19,9 +22,22 @@ class UserViewSet(ModelViewSet):
     serializer_class = UserSerializer
 
     def get_permissions(self):
-        if self.action in ["destroy", "block", "change_role"]:
+        if self.action in ["list"]:
+            return [IsAdminOrModerator(), IsNotBlocked()]
+        if self.action in ["retrieve", "update", "partial_update", "destroy"]:
+            return [IsAdminOrModerator(), IsNotBlocked()]
+        if self.action in ["block", "change_role"]:
             return [IsAuthenticated(), IsAdminOrModerator(), IsNotBlocked()]
-        return [IsAuthenticated(), IsAdminUser()]
+
+        return [IsAuthenticated(), IsNotBlocked()]
+
+    def get_queryset(self):
+        user = self.request.user
+
+        if user.role in [User.Roles.ADMIN, User.Roles.MODERATOR]:
+            return User.objects.all()
+
+        return User.objects.filter(id=user.id)
 
     @action(detail=False, methods=["get"])
     def me(self, request):
@@ -64,3 +80,13 @@ class UserViewSet(ModelViewSet):
 
         change_user_role(user, new_role)
         return Response({"status": "role updated"})
+
+
+class RegisterView(generics.CreateAPIView):
+    serializer_class = RegisterSerializer
+    permission_classes = [AllowAny]
+
+
+class LoginView(TokenObtainPairView):
+    serializer_class = EmailTokenObtainSerializer
+    permission_classes = [AllowAny]
