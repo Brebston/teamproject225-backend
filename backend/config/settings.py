@@ -42,11 +42,12 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "users",
     "rest_framework",
     "rest_framework_simplejwt",
-    "profiles"
     "rest_framework_simplejwt.token_blacklist",
+    "drf_spectacular",
+    "users",
+    "profiles",
 ]
 
 AUTH_USER_MODEL = "users.User"
@@ -136,11 +137,23 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
         "users.api.v1.permissions.IsNotBlocked",
     ),
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5679),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Svity Pokrov",
+    "DESCRIPTION": "API documentation for the project, "
+    "providing clear and structured information "
+    "about available endpoints, request/response formats, "
+    "and authentication methods. Designed to help "
+    "developers easily understand and integrate with the system.",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
 }

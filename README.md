@@ -6,6 +6,23 @@ A basic user system with roles, access control, and moderation is implemented.
 
 ---
 
+## API Documentation
+
+The project includes built-in API documentation for convenient endpoint browsing and testing.
+
+### Available links
+
+- Swagger UI: `http://127.0.0.1:8000/api/v1/schema/swagger/`
+- Redoc: `http://127.0.0.1:8000/api/v1/schema/redoc/`
+- OpenAPI Schema: `http://127.0.0.1:8000/api/v1/schema/`
+
+These pages allow you to:
+- explore available endpoints
+- check request and response schemas
+- test API requests in the browser
+
+---
+
 ## What is implemented
 
 ### Users and Roles
@@ -26,6 +43,13 @@ A basic user system with roles, access control, and moderation is implemented.
   - block users
   - delete users
 
+### Profiles
+- profile management for users
+- separate specialist profiles
+- document management for profiles
+- CRUD endpoints for profiles and specialist profiles
+- document upload and deletion endpoints
+
 ### API (users)
 
 Main endpoints:
@@ -42,6 +66,30 @@ Custom endpoints:
 - `POST api/v1/users/list/{id}/block/` — block user
 - `POST api/v1/users/list/{id}/change_role/` — change role
 - `GET api/v1/users/list/me/` — current user
+
+### API (profiles)
+
+Profiles:
+- `GET api/v1/profiles/` — list profiles
+- `POST api/v1/profiles/` — create profile
+- `GET api/v1/profiles/{id}/` — retrieve profile details
+- `PUT api/v1/profiles/{id}/` — update profile
+- `PATCH api/v1/profiles/{id}/` — partially update profile
+- `DELETE api/v1/profiles/{id}/` — delete profile
+
+Specialist profiles:
+- `GET api/v1/profiles/specialists/` — list specialist profiles
+- `POST api/v1/profiles/specialists/` — create specialist profile
+- `GET api/v1/profiles/specialists/{id}/` — retrieve specialist profile details
+- `PUT api/v1/profiles/specialists/{id}/` — update specialist profile
+- `PATCH api/v1/profiles/specialists/{id}/` — partially update specialist profile
+- `DELETE api/v1/profiles/specialists/{id}/` — delete specialist profile
+
+Documents:
+- `GET api/v1/profiles/documents/` — list documents
+- `POST api/v1/profiles/documents/` — upload document
+- `GET api/v1/profiles/documents/{id}/` — retrieve document details
+- `DELETE api/v1/profiles/documents/{id}/` — delete document
 
 ---
 
@@ -127,7 +175,19 @@ backend/
 │ ├── selectors.py # data access layer
 │ ├── services.py # business logic
 │ └── __init__.py
+├── profiles/
+│ ├── documents/
+│ ├── migrations/
+│ ├── __init__.py
+│ ├── admin.py
+│ ├── apps.py
+│ ├── models.py
+│ ├── serializers.py
+│ ├── urls.py
+│ └── views.py
 ├── .gitignore
+├── .README.md
+├── .env.example
 ├── manage.py
 └── requirements.txt
 ```
