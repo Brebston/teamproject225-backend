@@ -13,4 +13,7 @@ class IsNotBlocked(BasePermission):
     message = "Your account is blocked"
 
     def has_permission(self, request, view):
-        return request.user.is_authenticated and not request.user.is_blocked
+        if not request.user or not request.user.is_authenticated:
+            return True
+
+        return not request.user.is_blocked
