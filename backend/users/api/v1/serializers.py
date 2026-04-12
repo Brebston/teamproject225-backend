@@ -4,6 +4,9 @@ from rest_framework_simplejwt.serializers import (
     TokenObtainPairSerializer,
 )
 
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
+
 from users.models import User
 
 
@@ -29,6 +32,14 @@ class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["email", "password"]
+
+    def validate(self, data):
+        user = User(email=data["email"])
+        try:
+            validate_password(data["password"], user)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError({"password": e.messages})
+        return data
 
     def create(self, validated_data):
         return User.objects.create_user(**validated_data)
