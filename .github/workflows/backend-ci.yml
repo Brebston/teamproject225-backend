@@ -5,9 +5,6 @@ on:
     branches:
       - main
       - develop
-      - feature/*
-      - hotfix/*
-      - chore/*
   pull_request:
     branches:
       - main
