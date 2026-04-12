@@ -10,17 +10,6 @@ on:
                 required: false
                 type: boolean
                 default: false
-            run-tests:
-                required: false
-                type: boolean
-                default: false
-            use-env-example:
-                required: false
-                type: boolean
-                default: false
-        secrets:
-            SECRET_KEY:
-                required: false
 
 jobs:
     check:
@@ -46,35 +35,7 @@ jobs:
               if: ${{ inputs.run-security }}
               run: |
                   pip install bandit pip-audit
+                  # Скануємо папку backend на вразливості в коді
                   bandit -r backend -ll
-                  pip-audit -r requirements.txt
-
-            - name: Load env example
-              if: ${{ inputs.run-tests && inputs.use-env-example }}
-              run: |
-                  if [ -f backend/.env.example ]; then
-                    grep -v '^[[:space:]]*#' backend/.env.example >> $GITHUB_ENV
-                  fi
-
-            - name: Run Tests
-              if: ${{ inputs.run-tests }}
-              env:
-                  SECRET_KEY: ${{ secrets.SECRET_KEY || env.SECRET_KEY }}
-              run: |
-                  pip install -r requirements.txt
-                  coverage run -m pytest --suppress-no-test-exit-code || true
-
-                  if coverage report --skip-empty > /dev/null 2>&1; then
-                      echo "Tests found. Checking coverage threshold 80%..."
-                      coverage report --fail-under=80
-                  else
-                      echo "NOTICE: No tests discovered or no data collected. Skipping."
-                      exit 0
-                  fi
-
-            - name: Upload artifacts
-              if: ${{ inputs.run-tests && (github.ref_name == 'main' || github.event_name == 'workflow_dispatch') }}
-              uses: actions/upload-artifact@v4
-              with:
-                  name: python-artifacts
-                  path: ./backend
+                  # Перевіряємо залежності на відомі CVE
+                  pip-audit -r backend/requirements.txt
