@@ -35,7 +35,10 @@ jobs:
               if: ${{ inputs.run-security }}
               run: |
                   pip install bandit pip-audit
-                  # Скануємо папку backend на вразливості в коді
                   bandit -r backend -ll
-                  # Перевіряємо залежності на відомі CVE
                   pip-audit -r backend/requirements.txt
+
+            - name: Upload artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: bac

@@ -25,3 +25,9 @@ secrets.py
 
 *.log
 logs/
+
+README.md
+LICENSE
+
+.gitignore
+.dockerignore
