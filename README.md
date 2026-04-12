@@ -231,8 +231,8 @@ The project follows modern SDLC practices with a focus on Shift Left Security. C
   - **Linting**: `flake8` with `--max-complexity=6` (non-blocking).
   - **SAST**: `bandit` scan of the `backend/` package.
   - **Dependency Audit**: `pip-audit` against `backend/requirements.txt`.
-- **Workflow Triggers**: `backend-ci.yml` runs on pushes to `main`, `develop`, and branch prefixes `feature/*`, `hotfix/*`, `chore/*`, plus PRs to `main`/`develop`, and manual runs (`workflow_dispatch`).
-- **Container Build & Scan** (main or manual develop): Docker Buildx builds the image, Trivy scans it for `CRITICAL,HIGH` issues (fails on findings, ignores unfixed), then the image is pushed to Docker Hub with `latest` and commit SHA tags.
+- **Workflow Triggers**: `backend-ci.yml` runs on pushes to `main` and `develop`, PRs targeting `main`/`develop`, and manual runs (`workflow_dispatch`).
+- **Container Build & Scan**: Runs only on push to `main`/`develop` or manual trigger. Docker Buildx builds the image, Trivy scans it for `CRITICAL,HIGH` issues (fails on findings, ignores unfixed), then the image is pushed to Docker Hub with `latest` and commit SHA tags.
 - **CD Trigger**: After a successful image push, a `repository-dispatch` event triggers the infra repository workflow for deployment.
 
 ---
