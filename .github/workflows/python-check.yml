@@ -1,0 +1,41 @@
+name: Python Check Template
+
+on:
+    workflow_call:
+        inputs:
+            python-version:
+                required: true
+                type: string
+            run-security:
+                required: false
+                type: boolean
+                default: false
+
+jobs:
+    check:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: ${{ inputs.python-version }}
+                  cache: pip
+
+            - name: Install Linter
+              run: pip install flake8
+
+            - name: Lint check
+              run: flake8 . --max-complexity=6
+              continue-on-error: true
+
+            - name: Security Scan
+              if: ${{ inputs.run-security }}
+              run: |
+                  pip install bandit pip-audit
+                  # Скануємо папку backend на вразливості в коді
+                  bandit -r backend -ll
+                  # Перевіряємо залежності на відомі CVE
+                  pip-audit -r backend/requirements.txt
