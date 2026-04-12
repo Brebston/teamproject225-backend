@@ -235,3 +235,19 @@ The project follows modern SDLC practices with a focus on Shift Left Security. C
 - **Container Build & Scan** (main or manual develop): Docker Buildx builds the image, Trivy scans it for `CRITICAL,HIGH` issues (fails on findings, ignores unfixed), then the image is pushed to Docker Hub with `latest` and commit SHA tags.
 - **CD Trigger**: After a successful image push, a `repository-dispatch` event triggers the infra repository workflow for deployment.
 
+---
+
+## Docker
+
+Before running with Docker locally, make sure Docker Engine (or Docker Desktop) is installed and running on your machine.
+
+Build image:
+```bash
+docker build -t teamproject225-backend:local .
+```
+
+Run container:
+
+```bash
+docker run --rm -p 8000:8000 --env-file backend/.env teamproject225-backend:local
+```
