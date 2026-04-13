@@ -20,9 +20,9 @@ class ProfileListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         if hasattr(self.request.user, "profile"):
-            raise serializers.ValidationError({
-                "detail": "You already have a profile."
-            })
+            raise serializers.ValidationError(
+                {"detail": "You already have a profile."}
+            )
         serializer.save(user=self.request.user)
 
 
@@ -81,9 +81,11 @@ class DocumentListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         specialist = getattr(self.request.user, "specialist_profile", None)
         if specialist is None:
-            raise serializers.ValidationError({
-                "detail": "You need a specialist profile to upload documents."
-            })
+            raise serializers.ValidationError(
+                {
+                    "detail": "You need a specialist profile to upload documents."
+                }
+            )
         serializer.save(specialist=specialist)
 
 

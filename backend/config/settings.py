@@ -114,7 +114,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         "NAME": "users.api.v1.validators.MaxLengthPasswordValidator",
-    }
+    },
 ]
 
 

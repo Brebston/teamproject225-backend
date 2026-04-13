@@ -6,7 +6,7 @@ class Profile(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="profile"
+        related_name="profile",
     )
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150)
@@ -59,7 +59,7 @@ class Document(models.Model):
     status = models.CharField(
         max_length=20,
         choices=DocumentStatus.choices,
-        default=DocumentStatus.PENDING
+        default=DocumentStatus.PENDING,
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
