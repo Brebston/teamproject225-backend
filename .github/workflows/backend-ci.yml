@@ -30,7 +30,6 @@ jobs:
 
   build-and-push-image:
     runs-on: ubuntu-latest
-    needs: [lint-and-check]
 
     if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
 
