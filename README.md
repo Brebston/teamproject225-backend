@@ -160,37 +160,43 @@ Body:
 ## Project structure (main parts)
 
 ```
-backend/
-├── config/ # Django settings, urls, asgi, wsgi
-├── users/
-│ ├── api/
-│ │ └── v1/ # API versioning
-│ │ ├── permissions.py
+teamproject225-backend/
+├── backend/
+│ ├── __init__.py
+│ ├── .env.example
+│ ├── config/ # Django settings, urls, asgi, wsgi
+│ ├── users/
+│ │ ├── api/
+│ │ │ └── v1/ # API versioning
+│ │ │   ├── permissions.py
+│ │ │   ├── serializers.py
+│ │ │   ├── urls.py
+│ │ │   └── views.py
+│ │ ├── migrations/
+│ │ ├── admin.py # admin configuration
+│ │ ├── apps.py
+│ │ ├── models.py # User model
+│ │ ├── selectors.py # data access layer
+│ │ ├── services.py # business logic
+│ │ └── __init__.py
+│ ├── profiles/
+│ │ ├── migrations/
+│ │ ├── __init__.py
+│ │ ├── admin.py
+│ │ ├── apps.py
+│ │ ├── models.py
 │ │ ├── serializers.py
 │ │ ├── urls.py
 │ │ └── views.py
-│ ├── migrations/
-│ ├── admin.py # admin configuration
-│ ├── apps.py
-│ ├── models.py # User model
-│ ├── selectors.py # data access layer
-│ ├── services.py # business logic
-│ └── __init__.py
-├── profiles/
-│ ├── documents/
-│ ├── migrations/
-│ ├── __init__.py
-│ ├── admin.py
-│ ├── apps.py
-│ ├── models.py
-│ ├── serializers.py
-│ ├── urls.py
-│ └── views.py
+│ ├── manage.py
+│ └── requirements.txt
+├── .github/workflows/
+│ ├── backend-ci.yml
+│ └── python-check.yml
+├── .dockerignore
 ├── .gitignore
-├── .README.md
-├── .env.example
-├── manage.py
-└── requirements.txt
+├── Dockerfile
+└── README.md
 ```
 
 ---
@@ -216,4 +222,44 @@ pip install -r requirements.txt
 python manage.py migrate
 python manage.py createsuperuser
 python manage.py runserver
+```
+
+## Infrastructure & DevSecOps
+
+The project follows modern SDLC practices with a focus on Shift Left Security. Current automation is driven by GitHub Actions workflows in [.github/workflows/](.github/workflows/).
+
+- **CI Checks (GitHub Actions)**: The reusable workflow `python-check.yml` runs on CI calls:
+  - **Linting**: `flake8` with `--max-complexity=6` (non-blocking).
+  - **SAST**: `bandit` scan of the `backend/` package.
+  - **Dependency Audit**: `pip-audit` against `backend/requirements.txt`.
+- **Workflow Triggers**: `backend-ci.yml` runs on pushes to `main` and `develop`, PRs targeting `main`/`develop`, and manual runs (`workflow_dispatch`).
+- **Container Build & Scan**: Runs only on push to `main`/`develop` or manual trigger. Docker Buildx builds the image, Trivy scans it for `CRITICAL,HIGH` issues (fails on findings, ignores unfixed), then the image is pushed to Docker Hub with `latest` and commit SHA tags.
+- **CD Trigger**: After a successful image push, a `repository-dispatch` event triggers the infra repository workflow for deployment.
+
+---
+
+## Docker
+
+Before running with Docker locally, make sure Docker Engine (or Docker Desktop) is installed and running on your machine.
+
+Build image:
+```bash
+docker build -t teamproject225-backend:local .
+```
+
+Run container (with hot reload):
+
+Windows (CMD):
+```bat
+docker run --rm -p 8000:8000 --env-file backend/.env -v "%cd%\backend:/app" teamproject225-backend:local
+```
+
+Windows (PowerShell):
+```powershell
+docker run --rm -p 8000:8000 --env-file backend/.env -v "${PWD}\backend:/app" teamproject225-backend:local
+```
+
+macOS/Linux:
+```bash
+docker run --rm -p 8000:8000 --env-file backend/.env -v "$(pwd)/backend:/app" teamproject225-backend:local
 ```
