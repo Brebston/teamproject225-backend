@@ -29,7 +29,6 @@ jobs:
 
             - name: Lint check
               run: flake8 . --max-complexity=6
-              continue-on-error: true
 
             - name: Security Scan
               if: ${{ inputs.run-security }}
