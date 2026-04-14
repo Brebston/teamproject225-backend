@@ -28,7 +28,7 @@ jobs:
               run: pip install flake8
 
             - name: Lint check
-              run: flake8 . --max-complexity=6
+              run: flake8 . --max-complexity=6 --exclude=*/migrations/*
               continue-on-error: true
 
             - name: Security Scan
