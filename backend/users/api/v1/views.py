@@ -74,7 +74,10 @@ class UserViewSet(ModelViewSet):
 
         new_role = serializer.validated_data["role"]
 
-        if request.user.role == user.Roles.MODERATOR and new_role == user.Roles.ADMIN:
+        if (
+            request.user.role == user.Roles.MODERATOR
+            and new_role == user.Roles.ADMIN
+        ):
             return Response(
                 {"error": "Moderator cannot assign admin role"},
                 status=status.HTTP_403_FORBIDDEN,

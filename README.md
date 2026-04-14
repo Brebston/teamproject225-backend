@@ -89,7 +89,7 @@ Documents:
 - `GET api/v1/profiles/documents/` — list documents
 - `POST api/v1/profiles/documents/` — upload document
 - `GET api/v1/profiles/documents/{id}/` — retrieve document details
-- `DELETE api/v1/profiles/documents/{id}/` — delete document
+- `DELETE api/v1/profiles/documents/{id}/` — delete a document
 
 ---
 
@@ -135,14 +135,14 @@ Body:
 - Logout blacklists the refresh token
 - After logout:
   - refresh token can no longer be used
-  - access token remains valid until it expires
+  - an access token remains valid until it expires
 
 ---
 
 ### Important
 
 - Access token lifetime is limited (e.g. 5 minutes)
-- After expiration, user must login again
+- After expiration, the user must log in again
 - This is standard JWT behavior
 
 ---
@@ -153,6 +153,7 @@ Body:
   - login
   - access protected endpoints
 - All requests are checked with custom permissions
+- The minimum password length is 8 characters, and the maximum is 128
 
 ---
 
