@@ -3,7 +3,7 @@ attrs==26.1.0
 black==26.3.1
 click==8.3.2
 colorama==0.4.6
-Django==6.0.3
+django>=6.0.4
 django-stubs==6.0.2
 django-stubs-ext==6.0.2
 djangorestframework==3.17.1
@@ -16,7 +16,7 @@ jsonschema-specifications==2025.9.1
 mypy_extensions==1.1.0
 packaging==26.0
 pathspec==1.0.4
-pillow==12.0.0
+pillow>=12.1.1
 platformdirs==4.9.4
 PyJWT==2.12.1
 python-dotenv==1.2.2
