@@ -1,0 +1,18 @@
+[flake8]
+max-line-length = 100
+max-complexity = 6
+
+exclude = 
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    env,
+    build,
+    dist,
+    */migrations/*
+
+extend-ignore =
+    E203,
+    W503,
+    F401
