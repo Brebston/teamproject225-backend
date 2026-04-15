@@ -4,8 +4,6 @@ from django.core.exceptions import ValidationError
 
 class PasswordUppercaseLetterValidator:
     """
-    Summary of what the class does.
-
     This class is a custom password validator that enforces specific security
     requirements for passwords. Its purpose is to ensure that passwords meet
     predefined conditions, such as containing at least one uppercase letter.

@@ -216,3 +216,88 @@ python manage.py migrate
 python manage.py createsuperuser
 python manage.py runserver
 ```
+
+---
+
+## 🔄 Updates (Registration, Profiles, Documents)
+
+### Registration
+
+During registration (`POST api/v1/users/register/`), user must choose a role:
+
+Available roles:
+- `user`
+- `specialist`
+
+Other roles (`moderator`, `admin`) cannot be assigned during registration.
+
+Example request:
+```json
+{
+  "email": "user@example.com",
+  "password": "StrongPassword123",
+  "role": "specialist"
+}
+```
+
+---
+
+### Registration flow
+
+#### If role = `user`
+1. Register
+2. Create profile:
+   POST `/api/v1/profiles/`
+
+#### If role = `specialist`
+1. Register
+2. Create specialist profile:
+   POST `/api/v1/profiles/specialists/`
+3. Upload documents:
+   POST `/api/v1/profiles/documents/`
+
+---
+
+### Profiles changes
+
+- `user` field is no longer selectable in API forms
+- It is automatically assigned using authenticated user:
+```python
+serializer.save(user=request.user)
+```
+
+- In responses, user is shown as email:
+```python
+user_email = serializers.EmailField(source="user.email", read_only=True)
+```
+
+---
+
+### Documents changes
+
+- `specialist` field is no longer selectable
+- It is automatically assigned:
+```python
+serializer.save(specialist=user.specialist_profile)
+```
+
+- Displayed as email:
+```python
+specialist = serializers.EmailField(source="specialist.user.email", read_only=True)
+```
+
+---
+
+### Document upload rules
+
+- Only users with role `specialist` can upload documents
+- Specialist must have a profile before uploading documents
+
+---
+
+### Security improvements
+
+- Cannot create profile for another user
+- Cannot assign document to another specialist
+- Ownership is enforced via `request.user`
+- Related fields are read-only

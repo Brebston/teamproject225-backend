@@ -19,10 +19,14 @@ class ProfileListCreateView(generics.ListCreateAPIView):
         return Profile.objects.all()
 
     def perform_create(self, serializer):
+        if self.request.user.role != self.request.user.Roles.USER:
+            raise serializers.ValidationError(
+                {"detail": "Only users can create a regular profile."}
+            )
+
         if hasattr(self.request.user, "profile"):
-            raise serializers.ValidationError({
-                "detail": "You already have a profile."
-            })
+            raise serializers.ValidationError({"detail": "You already have a profile."})
+
         serializer.save(user=self.request.user)
 
 
@@ -79,11 +83,18 @@ class DocumentListCreateView(generics.ListCreateAPIView):
         return Document.objects.filter(specialist__user=user)
 
     def perform_create(self, serializer):
+        user = self.request.user
+        if user.role != user.Roles.SPECIALIST:
+            raise serializers.ValidationError(
+                {"detail": "Only specialists can upload documents."}
+            )
+
         specialist = getattr(self.request.user, "specialist_profile", None)
         if specialist is None:
-            raise serializers.ValidationError({
-                "detail": "You need a specialist profile to upload documents."
-            })
+            raise serializers.ValidationError(
+                {"detail": "You need a specialist profile to upload documents."}
+            )
+
         serializer.save(specialist=specialist)
 
 

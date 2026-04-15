@@ -4,15 +4,11 @@ from django.conf import settings
 
 class Profile(models.Model):
     user = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="profile"
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile"
     )
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150)
-    avatar = models.ImageField(
-        upload_to="profiles/avatars/", null=True, blank=True
-    )
+    avatar = models.ImageField(upload_to="profiles/avatars/", null=True, blank=True)
 
     class Meta:
         verbose_name = "Profile"
@@ -30,9 +26,7 @@ class SpecialistProfile(models.Model):
     )
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150)
-    avatar = models.ImageField(
-        upload_to="specialists/avatars/", null=True, blank=True
-    )
+    avatar = models.ImageField(upload_to="specialists/avatars/", null=True, blank=True)
     education = models.TextField()
     experience = models.TextField()
     specialisation = models.CharField(max_length=255)
@@ -57,9 +51,7 @@ class Document(models.Model):
     )
     file = models.ImageField(upload_to="profiles/documents/")
     status = models.CharField(
-        max_length=20,
-        choices=DocumentStatus.choices,
-        default=DocumentStatus.PENDING
+        max_length=20, choices=DocumentStatus.choices, default=DocumentStatus.PENDING
     )
     created_at = models.DateTimeField(auto_now_add=True)
 

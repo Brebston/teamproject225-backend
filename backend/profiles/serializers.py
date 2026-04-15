@@ -10,12 +10,13 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 
 class SpecialistProfileSerializer(serializers.ModelSerializer):
+    user_email = serializers.EmailField(source="user.email", read_only=True)
 
     class Meta:
         model = SpecialistProfile
         fields = [
             "id",
-            "user",
+            "user_email",
             "first_name",
             "last_name",
             "avatar",
@@ -28,6 +29,8 @@ class SpecialistProfileSerializer(serializers.ModelSerializer):
 
 
 class DocumentSerializer(serializers.ModelSerializer):
+    specialist = serializers.EmailField(source="specialist.user.email", read_only=True)
+
     class Meta:
         model = Document
         fields = ["id", "specialist", "file", "status", "created_at"]
