@@ -24,6 +24,14 @@ urlpatterns = [
         name="specialist-detail",
     ),
     # Documents
-    path("documents/", DocumentListCreateView.as_view(), name="document-list-create"),
-    path("documents/<int:pk>/", DocumentDetailView.as_view(), name="document-detail"),
+    path(
+        "documents/",
+        DocumentListCreateView.as_view(),
+        name="document-list-create",
+    ),
+    path(
+        "documents/<int:pk>/",
+        DocumentDetailView.as_view(),
+        name="document-detail",
+    ),
 ]

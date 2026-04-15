@@ -89,7 +89,7 @@ Documents:
 - `GET api/v1/profiles/documents/` — list documents
 - `POST api/v1/profiles/documents/` — upload document
 - `GET api/v1/profiles/documents/{id}/` — retrieve document details
-- `DELETE api/v1/profiles/documents/{id}/` — delete document
+- `DELETE api/v1/profiles/documents/{id}/` — delete a document
 
 ---
 
@@ -135,14 +135,14 @@ Body:
 - Logout blacklists the refresh token
 - After logout:
   - refresh token can no longer be used
-  - access token remains valid until it expires
+  - an access token remains valid until it expires
 
 ---
 
 ### Important
 
 - Access token lifetime is limited (e.g. 5 minutes)
-- After expiration, user must login again
+- After expiration, the user must log in again
 - This is standard JWT behavior
 
 ---
@@ -153,43 +153,50 @@ Body:
   - login
   - access protected endpoints
 - All requests are checked with custom permissions
+- The minimum password length is 8 characters, and the maximum is 128
 
 ---
 
 ## Project structure (main parts)
 
 ```
-backend/
-├── config/ # Django settings, urls, asgi, wsgi
-├── users/
-│ ├── api/
-│ │ └── v1/ # API versioning
-│ │ ├── permissions.py
+teamproject225-backend/
+├── backend/
+│ ├── __init__.py
+│ ├── .env.example
+│ ├── config/ # Django settings, urls, asgi, wsgi
+│ ├── users/
+│ │ ├── api/
+│ │ │ └── v1/ # API versioning
+│ │ │   ├── permissions.py
+│ │ │   ├── serializers.py
+│ │ │   ├── urls.py
+│ │ │   └── views.py
+│ │ ├── migrations/
+│ │ ├── admin.py # admin configuration
+│ │ ├── apps.py
+│ │ ├── models.py # User model
+│ │ ├── selectors.py # data access layer
+│ │ ├── services.py # business logic
+│ │ └── __init__.py
+│ ├── profiles/
+│ │ ├── migrations/
+│ │ ├── __init__.py
+│ │ ├── admin.py
+│ │ ├── apps.py
+│ │ ├── models.py
 │ │ ├── serializers.py
 │ │ ├── urls.py
 │ │ └── views.py
-│ ├── migrations/
-│ ├── admin.py # admin configuration
-│ ├── apps.py
-│ ├── models.py # User model
-│ ├── selectors.py # data access layer
-│ ├── services.py # business logic
-│ └── __init__.py
-├── profiles/
-│ ├── documents/
-│ ├── migrations/
-│ ├── __init__.py
-│ ├── admin.py
-│ ├── apps.py
-│ ├── models.py
-│ ├── serializers.py
-│ ├── urls.py
-│ └── views.py
+│ ├── manage.py
+│ └── requirements.txt
+├── .github/workflows/
+│ ├── backend-ci.yml
+│ └── python-check.yml
+├── .dockerignore
 ├── .gitignore
-├── .README.md
-├── .env.example
-├── manage.py
-└── requirements.txt
+├── Dockerfile
+└── README.md
 ```
 
 ---
