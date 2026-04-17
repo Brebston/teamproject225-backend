@@ -224,42 +224,87 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
-## Infrastructure & DevSecOps
+---
 
-The project follows modern SDLC practices with a focus on Shift Left Security. Current automation is driven by GitHub Actions workflows in [.github/workflows/](.github/workflows/).
+## 🔄 Updates (Registration, Profiles, Documents)
 
-- **CI Checks (GitHub Actions)**: The reusable workflow `python-check.yml` runs on CI calls:
-  - **Linting**: `flake8` with `--max-complexity=6` (non-blocking).
-  - **SAST**: `bandit` scan of the `backend/` package.
-  - **Dependency Audit**: `pip-audit` against `backend/requirements.txt`.
-- **Workflow Triggers**: `backend-ci.yml` runs on pushes to `main` and `develop`, PRs targeting `main`/`develop`, and manual runs (`workflow_dispatch`).
-- **Container Build & Scan**: Runs only on push to `main`/`develop` or manual trigger. Docker Buildx builds the image, Trivy scans it for `CRITICAL,HIGH` issues (fails on findings, ignores unfixed), then the image is pushed to Docker Hub with `latest` and commit SHA tags.
-- **CD Trigger**: After a successful image push, a `repository-dispatch` event triggers the infra repository workflow for deployment.
+### Registration
+
+During registration (`POST api/v1/users/register/`), user must choose a role:
+
+Available roles:
+- `user`
+- `specialist`
+
+Other roles (`moderator`, `admin`) cannot be assigned during registration.
+
+Example request:
+```json
+{
+  "email": "user@example.com",
+  "password": "StrongPassword123",
+  "role": "specialist"
+}
+```
 
 ---
 
-## Docker
+### Registration flow
 
-Before running with Docker locally, make sure Docker Engine (or Docker Desktop) is installed and running on your machine.
+#### If role = `user`
+1. Register
+2. Create profile:
+   POST `/api/v1/profiles/`
 
-Build image:
-```bash
-docker build -t teamproject225-backend:local .
+#### If role = `specialist`
+1. Register
+2. Create specialist profile:
+   POST `/api/v1/profiles/specialists/`
+3. Upload documents:
+   POST `/api/v1/profiles/documents/`
+
+---
+
+### Profiles changes
+
+- `user` field is no longer selectable in API forms
+- It is automatically assigned using authenticated user:
+```python
+serializer.save(user=request.user)
 ```
 
-Run container (with hot reload):
-
-Windows (CMD):
-```bat
-docker run --rm -p 8000:8000 --env-file backend/.env -v "%cd%\backend:/app" teamproject225-backend:local
+- In responses, user is shown as email:
+```python
+user_email = serializers.EmailField(source="user.email", read_only=True)
 ```
 
-Windows (PowerShell):
-```powershell
-docker run --rm -p 8000:8000 --env-file backend/.env -v "${PWD}\backend:/app" teamproject225-backend:local
+---
+
+### Documents changes
+
+- `specialist` field is no longer selectable
+- It is automatically assigned:
+```python
+serializer.save(specialist=user.specialist_profile)
 ```
 
-macOS/Linux:
-```bash
-docker run --rm -p 8000:8000 --env-file backend/.env -v "$(pwd)/backend:/app" teamproject225-backend:local
+- Displayed as email:
+```python
+specialist = serializers.EmailField(source="specialist.user.email", read_only=True)
 ```
+
+---
+
+### Document upload rules
+
+- Only users with role `specialist` can upload documents
+- Specialist must have a profile before uploading documents
+
+---
+
+### Security improvements
+
+- Cannot create profile for another user
+- Cannot assign document to another specialist
+- Ownership is enforced via `request.user`
+- Related fields are read-only

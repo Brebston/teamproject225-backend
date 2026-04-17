@@ -19,7 +19,7 @@ class UserSerializer(serializers.ModelSerializer):
 class MeSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "email"]
+        fields = ["id", "email", "role"]
 
 
 class RoleUpdateSerializer(serializers.Serializer):
@@ -27,14 +27,20 @@ class RoleUpdateSerializer(serializers.Serializer):
 
 
 class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
+    password = serializers.CharField(write_only=True, style={"input_type": "password"})
+    role = serializers.ChoiceField(
+        choices=[
+            (User.Roles.USER, "User"),
+            (User.Roles.SPECIALIST, "Specialist"),
+        ]
+    )
 
     class Meta:
         model = User
-        fields = ["email", "password"]
+        fields = ["email", "password", "role"]
 
     def validate(self, data):
-        user = User(email=data["email"])
+        user = User(email=data["email"], role=data["role"])
         try:
             validate_password(data["password"], user)
         except DjangoValidationError as e:
