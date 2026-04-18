@@ -19,11 +19,11 @@ class IsNotBlocked(BasePermission):
         return not request.user.is_blocked
 
 
-class IsOwner(BasePermission):
-    """Object-level: only the owner can write. Anyone authenticated can read."""
+class IsOwnerOrStaff(BasePermission):
+    """Object-level: only the owner or Admin/Moderator can read & write."""
 
     def has_object_permission(self, request, view, obj):
-        if request.method in SAFE_METHODS:
+        if request.user.role in [request.user.Roles.ADMIN, request.user.Roles.MODERATOR]:
             return True
         owner = getattr(obj, "user", None) or getattr(
             obj.profile, "user", None

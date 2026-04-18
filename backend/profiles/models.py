@@ -1,5 +1,28 @@
+import os
+import uuid
+
 from django.db import models
 from django.conf import settings
+from django.utils.text import slugify
+
+
+def build_file_path(folder: str, name_slug: str, extension: str) -> str:
+    return os.path.join(f"uploads/{folder}", f"{name_slug}-{uuid.uuid4()}{extension}")
+
+
+def make_upload_path(folder: str, last_name_attr: str = "last_name"):
+    def handler(instance, filename):
+        _, ext = os.path.splitext(filename)
+        obj = instance
+        for attr in last_name_attr.split("."):
+            obj = getattr(obj, attr)
+        return build_file_path(folder, slugify(obj), ext)
+    return handler
+
+
+profile_avatar_file_path = make_upload_path("profiles/avatars")
+specialist_avatar_file_path = make_upload_path("specialists/avatars")
+specialist_document_file_path = make_upload_path("specialists/documents", "specialist.last_name")
 
 
 class Profile(models.Model):
@@ -11,7 +34,7 @@ class Profile(models.Model):
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150)
     avatar = models.ImageField(
-        upload_to="profiles/avatars/", null=True, blank=True
+        upload_to=profile_avatar_file_path, null=True, blank=True
     )
 
     class Meta:
@@ -30,9 +53,7 @@ class SpecialistProfile(models.Model):
     )
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150)
-    avatar = models.ImageField(
-        upload_to="specialists/avatars/", null=True, blank=True
-    )
+    avatar = models.ImageField(upload_to=specialist_avatar_file_path, null=True, blank=True)
     education = models.TextField()
     experience = models.TextField()
     specialisation = models.CharField(max_length=255)
@@ -55,7 +76,7 @@ class Document(models.Model):
     specialist = models.ForeignKey(
         SpecialistProfile, on_delete=models.CASCADE, related_name="documents"
     )
-    file = models.ImageField(upload_to="profiles/documents/")
+    file = models.ImageField(upload_to=specialist_document_file_path)
     status = models.CharField(
         max_length=20,
         choices=DocumentStatus.choices,
