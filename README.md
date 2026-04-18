@@ -25,6 +25,144 @@ These pages allow you to:
 
 ## What is implemented
 
+## OAuth (Google Login)
+
+### What is implemented
+
+Google OAuth authentication is implemented using:
+- django-allauth
+- dj-rest-auth
+- JWT (SimpleJWT)
+
+Custom logic:
+- Blocking login for users with `is_blocked=True`
+- Auto-connecting existing users by email
+- JWT tokens returned after Google login
+
+---
+
+## Google Console Setup
+
+1. Go to Google Cloud Console
+2. Create project
+3. Enable:
+   - Google People API
+   - OAuth2
+
+4. Create OAuth Client ID:
+   - Type: Web application
+
+### Authorized redirect URIs (IMPORTANT)
+
+For development (React):
+```
+http://localhost:5173/auth/google/callback
+```
+
+For backend-only testing:
+```
+http://127.0.0.1:8000/accounts/google/login/callback/
+```
+
+---
+
+## Django Settings
+
+Already configured:
+
+- SITE_ID = 1
+- REST_USE_JWT = True
+- JWT enabled
+- allauth + google provider
+
+See settings:
+
+(see settings.py)
+
+
+---
+
+## Google Login Endpoint
+
+### Endpoint
+
+POST:
+```
+/api/v1/users/google/
+```
+
+### Request
+
+```json
+{
+  "access_token": "your_google_access_token"
+}
+```
+
+### Response
+
+```json
+{
+  "user": {
+    "id": 1,
+    "email": "user@gmail.com",
+    "first_name": "Name",
+    "last_name": "Surname"
+  },
+  "access": "jwt_access_token",
+  "refresh": "jwt_refresh_token"
+}
+```
+
+---
+
+## Flow (React + Backend)
+
+1. React → Google OAuth
+2. Google → redirect to:
+```
+http://localhost:5173/auth/google/callback
+```
+
+3. React extracts `access_token`
+4. React sends POST to backend:
+```
+/api/v1/users/google/
+```
+
+5. Backend:
+- verifies token via Google
+- creates / gets user
+- returns JWT tokens
+
+6. React:
+- stores token
+- sends Authorization header
+
+---
+
+## Blocking users
+
+- Implemented via `is_blocked`
+- Applied in:
+  - JWT login
+  - Google OAuth
+  - Permissions
+
+Blocked user:
+- cannot login
+- cannot access endpoints
+
+---
+
+## Notes
+
+- Callback URL must match Google Console exactly
+- React must be running for frontend callback
+- Backend-only flow uses `/accounts/google/login/`
+
+---
+
 ### Users and Roles
 - custom `User` model
 - roles:
@@ -172,6 +310,9 @@ Body:
 
 ```
 teamproject225-backend/
+├── .github/workflows/
+│ ├── backend-ci.yml
+│ └── python-check.yml
 ├── backend/
 │ ├── __init__.py
 │ ├── .env.example
@@ -181,15 +322,17 @@ teamproject225-backend/
 │ │ │ └── v1/ # API versioning
 │ │ │   ├── permissions.py
 │ │ │   ├── serializers.py
+│ │ │   ├── validators.py
 │ │ │   ├── urls.py
 │ │ │   └── views.py
 │ │ ├── migrations/
+│ │ ├── __init__.py
 │ │ ├── admin.py # admin configuration
 │ │ ├── apps.py
 │ │ ├── models.py # User model
 │ │ ├── selectors.py # data access layer
 │ │ ├── services.py # business logic
-│ │ └── __init__.py
+│ │ └── social_adapter.py # OAuth logic
 │ ├── profiles/
 │ │ ├── migrations/
 │ │ ├── __init__.py
@@ -199,11 +342,10 @@ teamproject225-backend/
 │ │ ├── serializers.py
 │ │ ├── urls.py
 │ │ └── views.py
+│ ├── __init__.py
 │ ├── manage.py
+│ ├── .env.example
 │ └── requirements.txt
-├── .github/workflows/
-│ ├── backend-ci.yml
-│ └── python-check.yml
 ├── .dockerignore
 ├── .gitignore
 ├── Dockerfile

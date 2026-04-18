@@ -6,6 +6,12 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.exceptions import PermissionDenied
+
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
+from allauth.socialaccount.providers.oauth2.client import OAuth2Client
+
+from dj_rest_auth.registration.views import SocialLoginView
 
 from profiles.serializers import ProfileSerializer, SpecialistProfileDetailSerializer
 from users.models import User
@@ -125,3 +131,33 @@ class LogoutView(APIView):
             return Response(
                 {"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST
             )
+
+
+class GoogleLoginView(SocialLoginView):
+    adapter_class = GoogleOAuth2Adapter
+    client_class = OAuth2Client
+    callback_url = "http://localhost:5173/auth/google/callback"
+
+    def post(self, request, *args, **kwargs):
+        super().post(request, *args, **kwargs)
+
+        user = self.user
+
+        if user.is_blocked:
+            raise PermissionDenied("User is blocked")
+
+        refresh = RefreshToken.for_user(user)
+
+        return Response(
+            {
+                "user": {
+                    "id": user.id,
+                    "email": user.email,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                },
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+            },
+            status=status.HTTP_200_OK,
+        )
