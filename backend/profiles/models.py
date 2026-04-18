@@ -10,7 +10,9 @@ class Profile(models.Model):
     )
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150)
-    avatar = models.ImageField(upload_to="profiles/avatars/", null=True, blank=True)
+    avatar = models.ImageField(
+        upload_to="profiles/avatars/", null=True, blank=True
+    )
 
     class Meta:
         verbose_name = "Profile"
@@ -28,7 +30,9 @@ class SpecialistProfile(models.Model):
     )
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150)
-    avatar = models.ImageField(upload_to="specialists/avatars/", null=True, blank=True)
+    avatar = models.ImageField(
+        upload_to="specialists/avatars/", null=True, blank=True
+    )
     education = models.TextField()
     experience = models.TextField()
     specialisation = models.CharField(max_length=255)

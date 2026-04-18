@@ -8,9 +8,6 @@ from rest_framework.exceptions import PermissionDenied
 
 class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
     def pre_social_login(self, request, sociallogin):
-        if sociallogin.is_existing:
-            return
-
         email = sociallogin.account.extra_data.get("email")
 
         if not email:
@@ -20,16 +17,21 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
 
         try:
             user = User.objects.get(email=email)
+
             if user.is_blocked:
                 raise PermissionDenied("User is blocked")
 
-            sociallogin.connect(request, user)
+            if not sociallogin.is_existing:
+                sociallogin.connect(request, user)
 
         except User.DoesNotExist:
             pass
 
     def save_user(self, request, sociallogin, form=None):
         user = super().save_user(request, sociallogin, form)
+
+        if user.is_blocked:
+            raise PermissionDenied("User is blocked")
 
         if not user.role:
             user.role = User.Roles.USER

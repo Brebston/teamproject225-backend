@@ -180,6 +180,8 @@ SPECTACULAR_SETTINGS = {
 # django.contrib.sites
 SITE_ID = 1
 
+REST_USE_JWT = True
+JWT_AUTH_COOKIE = None
 
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",

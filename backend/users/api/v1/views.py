@@ -131,3 +131,27 @@ class GoogleLoginView(SocialLoginView):
     adapter_class = GoogleOAuth2Adapter
     client_class = OAuth2Client
     callback_url = "http://localhost:5173/auth/google/callback"
+
+    def post(self, request, *args, **kwargs):
+        super().post(request, *args, **kwargs)
+
+        user = self.user
+
+        if user.is_blocked:
+            raise PermissionDenied("User is blocked")
+
+        refresh = RefreshToken.for_user(user)
+
+        return Response(
+            {
+                "user": {
+                    "id": user.id,
+                    "email": user.email,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                },
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+            },
+            status=status.HTTP_200_OK,
+        )

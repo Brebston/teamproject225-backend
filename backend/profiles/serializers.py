@@ -29,7 +29,9 @@ class SpecialistProfileSerializer(serializers.ModelSerializer):
 
 
 class DocumentSerializer(serializers.ModelSerializer):
-    specialist = serializers.EmailField(source="specialist.user.email", read_only=True)
+    specialist = serializers.EmailField(
+        source="specialist.user.email", read_only=True
+    )
 
     class Meta:
         model = Document

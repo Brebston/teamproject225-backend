@@ -27,7 +27,9 @@ class RoleUpdateSerializer(serializers.Serializer):
 
 
 class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, style={"input_type": "password"})
+    password = serializers.CharField(
+        write_only=True, style={"input_type": "password"}
+    )
     role = serializers.ChoiceField(
         choices=[
             (User.Roles.USER, "User"),
