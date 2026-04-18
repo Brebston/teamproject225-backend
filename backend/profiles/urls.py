@@ -1,37 +1,9 @@
-from django.urls import path
-from .views import (
-    ProfileListCreateView,
-    ProfileDetailView,
-    SpecialistProfileListCreateView,
-    SpecialistProfileDetailView,
-    DocumentListCreateView,
-    DocumentDetailView,
-)
+from rest_framework.routers import DefaultRouter
+from .views import ProfileViewSet, SpecialistProfileViewSet, DocumentViewSet
 
-urlpatterns = [
-    # Profiles
-    path("", ProfileListCreateView.as_view(), name="profile-list-create"),
-    path("<int:pk>/", ProfileDetailView.as_view(), name="profile-detail"),
-    # Specialist Profiles
-    path(
-        "specialists/",
-        SpecialistProfileListCreateView.as_view(),
-        name="specialist-list-create",
-    ),
-    path(
-        "specialists/<int:pk>/",
-        SpecialistProfileDetailView.as_view(),
-        name="specialist-detail",
-    ),
-    # Documents
-    path(
-        "documents/",
-        DocumentListCreateView.as_view(),
-        name="document-list-create",
-    ),
-    path(
-        "documents/<int:pk>/",
-        DocumentDetailView.as_view(),
-        name="document-detail",
-    ),
-]
+router = DefaultRouter()
+router.register("user-profiles", ProfileViewSet, basename="profile")
+router.register("specialist-profiles", SpecialistProfileViewSet, basename="specialist-profile")
+router.register("documents", DocumentViewSet, basename="document")
+
+urlpatterns = router.urls

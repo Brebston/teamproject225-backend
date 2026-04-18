@@ -13,6 +13,7 @@ from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 
 from dj_rest_auth.registration.views import SocialLoginView
 
+from profiles.serializers import ProfileSerializer, SpecialistProfileDetailSerializer
 from users.models import User
 from users.api.v1.serializers import (
     RegisterSerializer,
@@ -49,7 +50,12 @@ class UserViewSet(ModelViewSet):
 
     @action(detail=False, methods=["get"])
     def me(self, request):
-        serializer = MeSerializer(request.user)
+        if hasattr(request.user, "specialist_profile"):
+            serializer = SpecialistProfileDetailSerializer(request.user.specialist_profile)
+        elif hasattr(request.user, "profile"):
+            serializer = ProfileSerializer(request.user.profile)
+        else:
+            serializer = MeSerializer(request.user)
         return Response(serializer.data)
 
     @action(detail=True, methods=["post"])
