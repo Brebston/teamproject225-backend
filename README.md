@@ -36,7 +36,7 @@ These pages allow you to:
 - `is_blocked` field for user blocking
 
 ### Access Control
-- custom permission `IsAdminOrModerator`
+- custom permissions `IsAdminOrModerator` & `IsOwnerOrStaff`
 - role-based access in `UserViewSet`
 - only moderator/admin can:
   - change roles
@@ -70,28 +70,39 @@ Custom endpoints:
 ### API (profiles)
 
 Profiles:
-- `GET api/v1/profiles/` — list profiles
-- `POST api/v1/profiles/` — create profile
-- `GET api/v1/profiles/{id}/` — retrieve profile details
-- `PUT api/v1/profiles/{id}/` — update profile
-- `PATCH api/v1/profiles/{id}/` — partially update profile
-- `DELETE api/v1/profiles/{id}/` — delete profile
+- `GET api/v1/profiles/user-profiles/` — list profiles
+- `POST api/v1/profiles/user-profiles/` — create profile
+- `GET api/v1/profiles/user-profiles/{id}/` — retrieve profile details
+- `PUT api/v1/profiles/user-profiles/{id}/` — update profile
+- `PATCH api/v1/profiles/user-profiles/{id}/` — partially update profile
+- `DELETE api/v1/profiles/user-profiles/{id}/` — delete profile
 
 Specialist profiles:
-- `GET api/v1/profiles/specialists/` — list specialist profiles
-- `POST api/v1/profiles/specialists/` — create specialist profile
-- `GET api/v1/profiles/specialists/{id}/` — retrieve specialist profile details
-- `PUT api/v1/profiles/specialists/{id}/` — update specialist profile
-- `PATCH api/v1/profiles/specialists/{id}/` — partially update specialist profile
-- `DELETE api/v1/profiles/specialists/{id}/` — delete specialist profile
+- `GET api/v1/profiles/specialist-profiles/` — list specialist profiles
+- `POST api/v1/profiles/specialist-profiles/` — create specialist profile
+- `GET api/v1/profiles/specialist-profiles/{id}/` — retrieve specialist profile details
+- `PUT api/v1/profiles/specialist-profiles/{id}/` — update specialist profile
+- `PATCH api/v1/profiles/specialist-profiles/{id}/` — partially update specialist profile
+- `DELETE api/v1/profiles/specialist-profiles/{id}/` — delete specialist profile
 
 Documents:
 - `GET api/v1/profiles/documents/` — list documents
 - `POST api/v1/profiles/documents/` — upload document
 - `GET api/v1/profiles/documents/{id}/` — retrieve document details
+- `PATCH api/v1/profiles/documents/{id}/` — partially update document
 - `DELETE api/v1/profiles/documents/{id}/` — delete a document
 
 ---
+
+## Media Support
+
+- Added `MEDIA_ROOT` and `MEDIA_URL` to enable serving uploaded files  
+- Added upload paths for:
+  - profile avatars  
+  - specialist avatars  
+  - specialist documents  
+
+Uploaded files are stored under the `uploads/` directory with automatically generated filenames.
 
 ## Authentication (JWT)
 
@@ -254,12 +265,12 @@ Example request:
 #### If role = `user`
 1. Register
 2. Create profile:
-   POST `/api/v1/profiles/`
+   POST `/api/v1/profiles/user-profiles/`
 
 #### If role = `specialist`
 1. Register
 2. Create specialist profile:
-   POST `/api/v1/profiles/specialists/`
+   POST `/api/v1/profiles/specialist-profiles/`
 3. Upload documents:
    POST `/api/v1/profiles/documents/`
 
