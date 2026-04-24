@@ -22,8 +22,7 @@ jobs:
   lint-and-check:
     uses: ./.github/workflows/python-check.yml
 
-    if: github.event_name == 'pull_request' || github.event_name ==
-      'workflow_dispatch'
+    if: github.event_name == 'pull_request'
 
     with:
       python-version: "3.12"
