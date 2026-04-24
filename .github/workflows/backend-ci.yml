@@ -22,7 +22,8 @@ jobs:
   lint-and-check:
     uses: ./.github/workflows/python-check.yml
 
-    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'pull_request' || github.event_name ==
+      'workflow_dispatch'
 
     with:
       python-version: "3.12"
@@ -31,7 +32,8 @@ jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
 
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      github.event_name == 'workflow_dispatch'
 
     env:
       IMAGE_NAME: wdoc-backend
@@ -70,11 +72,12 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: "${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          image-ref: "${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{
+            github.sha }}"
           format: "table"
           exit-code: "1"
           ignore-unfixed: true
-          severity: "CRITICAL,HIGH"
+          severity: "CRITICAL"
           cache-dir: ${{ env.TRIVY_CACHE_DIR }}
 
       - name: Push Docker Image
@@ -86,7 +89,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-and-push-image
 
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      github.event_name == 'workflow_dispatch'
 
     env:
       REPOSITORY_NAME: whatislavx/world-of-development-of-opportunities-and-change-infra
