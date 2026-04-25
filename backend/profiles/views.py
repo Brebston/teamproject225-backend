@@ -24,7 +24,11 @@ class ProfileViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ("retrieve", "update", "partial_update", "destroy"):
-            return [permissions.IsAuthenticated(), IsNotBlocked(), IsOwnerOrStaff()]
+            return [
+                permissions.IsAuthenticated(),
+                IsNotBlocked(),
+                IsOwnerOrStaff(),
+            ]
         return [permissions.IsAuthenticated(), IsNotBlocked()]
 
     def get_queryset(self):
@@ -53,7 +57,11 @@ class SpecialistProfileViewSet(viewsets.ModelViewSet):
         if self.action in ("list", "retrieve"):
             return [AllowAny()]
         if self.action in ("update", "partial_update", "destroy"):
-            return [permissions.IsAuthenticated(), IsNotBlocked(), IsOwnerOrStaff()]
+            return [
+                permissions.IsAuthenticated(),
+                IsNotBlocked(),
+                IsOwnerOrStaff(),
+            ]
         return [permissions.IsAuthenticated(), IsNotBlocked()]
 
     def get_queryset(self):
@@ -94,7 +102,11 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ("put", "destroy"):
-            return [permissions.IsAuthenticated(), IsNotBlocked(), IsOwnerOrStaff()]
+            return [
+                permissions.IsAuthenticated(),
+                IsNotBlocked(),
+                IsOwnerOrStaff(),
+            ]
         return [permissions.IsAuthenticated(), IsNotBlocked()]
 
     def get_queryset(self):
@@ -118,6 +130,8 @@ class DocumentViewSet(viewsets.ModelViewSet):
         specialist = getattr(user, "specialist_profile", None)
         if specialist is None:
             raise serializers.ValidationError(
-                {"detail": "You need a specialist profile to upload documents."}
+                {
+                    "detail": "You need a specialist profile to upload documents."
+                }
             )
         serializer.save(specialist=specialist)

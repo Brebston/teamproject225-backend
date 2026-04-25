@@ -10,7 +10,9 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 
 class DocumentSerializer(serializers.ModelSerializer):
-    specialist = serializers.EmailField(source="specialist.user.email", read_only=True)
+    specialist = serializers.EmailField(
+        source="specialist.user.email", read_only=True
+    )
 
     class Meta:
         model = Document
@@ -77,7 +79,7 @@ class SpecialistProfileDetailSerializer(serializers.ModelSerializer):
             "experience",
             "specialisation",
             "is_verified",
-            "documents"
+            "documents",
         ]
         read_only_fields = ["is_verified"]  # controlled by admins/moderators
 
