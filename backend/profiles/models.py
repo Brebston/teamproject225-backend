@@ -7,7 +7,9 @@ from django.utils.text import slugify
 
 
 def build_file_path(folder: str, name_slug: str, extension: str) -> str:
-    return os.path.join(f"uploads/{folder}", f"{name_slug}-{uuid.uuid4()}{extension}")
+    return os.path.join(
+        f"uploads/{folder}", f"{name_slug}-{uuid.uuid4()}{extension}"
+    )
 
 
 def make_upload_path(folder: str, last_name_attr: str = "last_name"):
@@ -17,12 +19,15 @@ def make_upload_path(folder: str, last_name_attr: str = "last_name"):
         for attr in last_name_attr.split("."):
             obj = getattr(obj, attr)
         return build_file_path(folder, slugify(obj), ext)
+
     return handler
 
 
 profile_avatar_file_path = make_upload_path("profiles/avatars")
 specialist_avatar_file_path = make_upload_path("specialists/avatars")
-specialist_document_file_path = make_upload_path("specialists/documents", "specialist.last_name")
+specialist_document_file_path = make_upload_path(
+    "specialists/documents", "specialist.last_name"
+)
 
 
 class Profile(models.Model):
@@ -53,7 +58,9 @@ class SpecialistProfile(models.Model):
     )
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150)
-    avatar = models.ImageField(upload_to=specialist_avatar_file_path, null=True, blank=True)
+    avatar = models.ImageField(
+        upload_to=specialist_avatar_file_path, null=True, blank=True
+    )
     education = models.TextField()
     experience = models.TextField()
     specialisation = models.CharField(max_length=255)

@@ -18,7 +18,10 @@ from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
-from profiles.serializers import ProfileSerializer, SpecialistProfileDetailSerializer
+from profiles.serializers import (
+    ProfileSerializer,
+    SpecialistProfileDetailSerializer,
+)
 from users.models import User
 from users.api.v1.serializers import (
     RegisterSerializer,
@@ -59,7 +62,9 @@ class UserViewSet(ModelViewSet):
     @action(detail=False, methods=["get"])
     def me(self, request):
         if hasattr(request.user, "specialist_profile"):
-            serializer = SpecialistProfileDetailSerializer(request.user.specialist_profile)
+            serializer = SpecialistProfileDetailSerializer(
+                request.user.specialist_profile
+            )
         elif hasattr(request.user, "profile"):
             serializer = ProfileSerializer(request.user.profile)
         else:

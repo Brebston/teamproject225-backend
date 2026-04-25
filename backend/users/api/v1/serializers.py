@@ -11,7 +11,6 @@ from django.utils.http import urlsafe_base64_decode
 
 from users.models import User
 
-
 User = get_user_model()
 
 
@@ -77,7 +76,9 @@ class PasswordResetRequestSerializer(serializers.Serializer):
 class PasswordResetConfirmSerializer(serializers.Serializer):
     uid = serializers.CharField()
     token = serializers.CharField()
-    password = serializers.CharField(write_only=True, style={"input_type": "password"})
+    password = serializers.CharField(
+        write_only=True, style={"input_type": "password"}
+    )
     confirm_password = serializers.CharField(
         write_only=True,
         style={"input_type": "password"},
@@ -101,7 +102,9 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         )
 
         if not token_is_valid:
-            raise serializers.ValidationError({"token": "Invalid or expired token"})
+            raise serializers.ValidationError(
+                {"token": "Invalid or expired token"}
+            )
 
         try:
             validate_password(data["password"], user)
@@ -109,5 +112,5 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
             raise serializers.ValidationError({"password": e.messages})
 
         data["user"] = user
-        
+
         return data
