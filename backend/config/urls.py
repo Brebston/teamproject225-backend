@@ -29,6 +29,7 @@ from drf_spectacular.views import (
 )
 
 from config import settings
+from config.services import health_check
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -52,5 +53,10 @@ urlpatterns = [
         "api/v1/schema/redoc/",
         SpectacularRedocView.as_view(url_name="schema"),
         name="redoc",
+    ),
+    path(
+        "api/v1/health-check/",
+        health_check,
+        name="health-check",
     ),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
