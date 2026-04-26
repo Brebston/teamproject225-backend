@@ -141,6 +141,162 @@ http://localhost:5173/auth/google/callback
 
 ---
 
+# Password Reset (Django + DRF + Celery)
+
+## Overview
+
+We implemented password reset functionality using Django built-in token generator, DRF endpoints, and Celery for async email sending.
+
+Flow:
+1. User sends email
+2. Backend generates uid + token
+3. Sends reset link (Celery task)
+4. User opens link
+5. Sends new password
+6. Password updated
+
+---
+
+## .env configuration
+
+Add the following variables:
+
+```
+FRONTEND_URL=http://localhost:5173 for frontend or http://127.0.0.1:8000/api/v1/users for backend-only
+
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=your_email@gmail.com
+EMAIL_HOST_PASSWORD=your_app_password
+
+CELERY_BROKER_URL=redis://localhost:6379/0
+CELERY_RESULT_BACKEND=redis://localhost:6379/0
+```
+
+
+
+### EMAIL_HOST_PASSWORD (Google)
+
+This is NOT your Gmail password.
+
+You must generate **App Password**:
+
+1. Go to Google Account → Security
+2. Enable 2FA
+3. Go to:
+   https://myaccount.google.com/apppasswords
+4. Generate password for "Mail"
+5. Use it as EMAIL_HOST_PASSWORD
+
+---
+
+## Redis (Celery) via Docker
+
+To run Redis locally for Celery, use Docker:
+
+### Run Redis container
+
+```bash
+docker run -d -p 6379:6379 --name redis redis
+```
+
+### Сheck if container is running
+
+```bash
+docker ps
+```
+
+### Stop Redis
+
+```bash
+docker stop redis
+```
+
+### Start again
+
+```bash
+docker start redis
+```
+
+---
+
+## Celery start
+
+Open a new terminal:
+
+```bash
+cd backend
+celery -A config worker -l info
+```
+
+### For Windows:
+
+```bash
+celery -A config worker -l info -P solo
+```
+
+---
+
+## Notes
+
+- Redis must be running before starting Celery
+- Default port: `6379`
+- Broker URL must match `.env`:
+
+```
+CELERY_BROKER_URL=redis://localhost:6379/0
+```
+
+
+## Endpoints
+
+### 1. Request reset
+
+POST `/api/v1/users/password-reset/`
+
+```
+{
+  "email": "user@example.com"
+}
+```
+
+Response:
+```
+{
+  "detail": "If this email exists, reset link was generated."
+}
+```
+
+---
+
+### 2. Reset password (GET for testing)
+
+GET `/api/v1/users/password-reset/confirm/?uid=...&token=...`
+
+---
+
+### 3. Confirm reset
+
+POST `/api/v1/users/password-reset/confirm/`
+
+```
+{
+  "uid": "...",
+  "token": "...",
+  "password": "NewPass123!",
+  "confirm_password": "NewPass123!"
+}
+```
+
+---
+
+## Production notes
+
+- Use Celery + Redis
+- Use HTTPS
+- Do not expose user existence
+- Use strong password validation
+
 ## Blocking users
 
 - Implemented via `is_blocked`
@@ -196,6 +352,8 @@ Main endpoints:
 - `POST api/v1/users/register/` — create user
 - `POST api/v1/users/login/` — authorize user
 - `POST api/v1/users/logout/` — logout (blacklist refresh token)
+- `POST /api/v1/users/password-reset/` - reset password
+- `POST /api/v1/users/password-reset/confirm/` - confirm reset password
 - `DELETE /users/list/{id}/` — delete user
 - `POST api/v1/token/verify/` — verify token
 - `POST api/v1/token/refresh/` — refresh token
@@ -316,12 +474,13 @@ teamproject225-backend/
 ├── backend/
 │ ├── __init__.py
 │ ├── .env.example
-│ ├── config/ # Django settings, urls, asgi, wsgi
+│ ├── config/ # Django settings, urls, asgi, wsgi, celery
 │ ├── users/
 │ │ ├── api/
 │ │ │ └── v1/ # API versioning
 │ │ │   ├── permissions.py
 │ │ │   ├── serializers.py
+│ │ │   ├── tasks.py
 │ │ │   ├── validators.py
 │ │ │   ├── urls.py
 │ │ │   └── views.py
@@ -379,7 +538,7 @@ python manage.py runserver
 
 ---
 
-## 🔄 Updates (Registration, Profiles, Documents)
+## Updates (Registration, Profiles, Documents)
 
 ### Registration
 
