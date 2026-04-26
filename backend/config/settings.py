@@ -55,6 +55,8 @@ INSTALLED_APPS = [
     "allauth.account",
     "allauth.socialaccount",
     "allauth.socialaccount.providers.google",
+    # Third‑party
+    "phonenumber_field",
     # Apps
     "users",
     "profiles",
