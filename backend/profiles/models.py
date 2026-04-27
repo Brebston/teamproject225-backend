@@ -3,34 +3,41 @@ import uuid
 
 from django.db import models
 from django.conf import settings
-from django.utils.text import slugify
+
+from phonenumber_field.modelfields import PhoneNumberField
 
 
-def build_file_path(folder: str, name_slug: str, extension: str) -> str:
-    return os.path.join(
-        f"uploads/{folder}", f"{name_slug}-{uuid.uuid4()}{extension}"
-    )
+def build_file_path(folder: str, extension: str) -> str:
+    return os.path.join(f"uploads/{folder}", f"{uuid.uuid4()}{extension}")
 
 
-def make_upload_path(folder: str, last_name_attr: str = "last_name"):
-    def handler(instance, filename):
-        _, ext = os.path.splitext(filename)
-        obj = instance
-        for attr in last_name_attr.split("."):
-            obj = getattr(obj, attr)
-        return build_file_path(folder, slugify(obj), ext)
-
-    return handler
+def profile_avatar_file_path(instance, filename):
+    _, ext = os.path.splitext(filename)
+    return build_file_path("profiles/avatars", ext)
 
 
-profile_avatar_file_path = make_upload_path("profiles/avatars")
-specialist_avatar_file_path = make_upload_path("specialists/avatars")
-specialist_document_file_path = make_upload_path(
-    "specialists/documents", "specialist.last_name"
-)
+def specialist_avatar_file_path(instance, filename):
+    _, ext = os.path.splitext(filename)
+    return build_file_path("specialists/avatars", ext)
+
+
+def specialist_document_file_path(instance, filename):
+    _, ext = os.path.splitext(filename)
+    return build_file_path("specialists/documents", ext)
 
 
 class Profile(models.Model):
+    class Gender(models.TextChoices):
+        MALE = "male", "Male"
+        FEMALE = "female", "Female"
+        OTHER = "other", "Other"
+        PREFER_NOT_TO_SAY = "prefer_not_to_say", "Prefer not to say"
+
+    class Education(models.TextChoices):
+        PSYCHOLOGIST = "psychologist", "Psychologist"
+        TRAUMA_INFORMED_EDUCATOR = "trauma informed educator", "Trauma informed educator"
+        OTHER = "other", "Other"
+
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -38,9 +45,28 @@ class Profile(models.Model):
     )
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150)
+    phone = PhoneNumberField(region="UA")
+    city = models.CharField(max_length=150)
+    birth_date = models.DateField()
+    gender = models.CharField(
+        max_length=20,
+        choices=Gender.choices,
+        default=Gender.PREFER_NOT_TO_SAY,
+    )
+    education = models.CharField(
+        max_length=30,
+        choices=Education.choices,
+        default=Education.OTHER,
+    )
+    education_other = models.CharField(max_length=255, null=True, blank=True)
+    cares_for_children = models.BooleanField(default=False)
     avatar = models.ImageField(
         upload_to=profile_avatar_file_path, null=True, blank=True
     )
+    bio = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    data_processing_consent_accepted_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         verbose_name = "Profile"
@@ -58,13 +84,17 @@ class SpecialistProfile(models.Model):
     )
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150)
-    avatar = models.ImageField(
-        upload_to=specialist_avatar_file_path, null=True, blank=True
-    )
+    avatar = models.ImageField(upload_to=specialist_avatar_file_path, null=True, blank=True)
+    phone = PhoneNumberField(region="UA")
+    city = models.CharField(max_length=150)
+    specialisation = models.CharField(max_length=255)
     education = models.TextField()
     experience = models.TextField()
-    specialisation = models.CharField(max_length=255)
+    bio = models.TextField(null=True, blank=True)
     is_verified = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    data_processing_consent_accepted_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         verbose_name = "Specialist Profile"

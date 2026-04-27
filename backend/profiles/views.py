@@ -6,29 +6,28 @@ from users.api.v1.permissions import IsNotBlocked, IsOwnerOrStaff
 from users.models import User
 from .models import Profile, SpecialistProfile, Document
 from .serializers import (
-    ProfileSerializer,
-    SpecialistProfileSerializer,
-    DocumentSerializer,
-    DocumentModeratorSerializer,
-    SpecialistProfileModeratorSerializer,
+    ProfileCreateSerializer,
+    ProfileUpdateSerializer,
+    ProfileListSerializer,
+    ProfileDetailSerializer,
+    SpecialistProfileCreateSerializer,
+    SpecialistProfileUpdateSerializer,
     SpecialistProfileListSerializer,
     SpecialistProfileDetailSerializer,
+    SpecialistProfileModeratorSerializer,
+    DocumentSerializer,
+    DocumentModeratorSerializer,
 )
 
 ADMIN_ROLES = [User.Roles.ADMIN, User.Roles.MODERATOR]
 
 
 class ProfileViewSet(viewsets.ModelViewSet):
-    serializer_class = ProfileSerializer
     permission_classes = [permissions.IsAuthenticated, IsNotBlocked]
 
     def get_permissions(self):
         if self.action in ("retrieve", "update", "partial_update", "destroy"):
-            return [
-                permissions.IsAuthenticated(),
-                IsNotBlocked(),
-                IsOwnerOrStaff(),
-            ]
+            return [permissions.IsAuthenticated(), IsNotBlocked(), IsOwnerOrStaff()]
         return [permissions.IsAuthenticated(), IsNotBlocked()]
 
     def get_queryset(self):
@@ -36,6 +35,15 @@ class ProfileViewSet(viewsets.ModelViewSet):
         if user.is_authenticated and user.role in ADMIN_ROLES:
             return Profile.objects.all()
         return Profile.objects.filter(user=user)
+
+    def get_serializer_class(self):
+        return {
+            "create": ProfileCreateSerializer,
+            "update": ProfileUpdateSerializer,
+            "partial_update": ProfileUpdateSerializer,
+            "list": ProfileListSerializer,
+            "retrieve": ProfileDetailSerializer,
+        }.get(self.action, ProfileDetailSerializer)
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -57,11 +65,7 @@ class SpecialistProfileViewSet(viewsets.ModelViewSet):
         if self.action in ("list", "retrieve"):
             return [AllowAny()]
         if self.action in ("update", "partial_update", "destroy"):
-            return [
-                permissions.IsAuthenticated(),
-                IsNotBlocked(),
-                IsOwnerOrStaff(),
-            ]
+            return [permissions.IsAuthenticated(), IsNotBlocked(), IsOwnerOrStaff()]
         return [permissions.IsAuthenticated(), IsNotBlocked()]
 
     def get_queryset(self):
@@ -90,34 +94,32 @@ class SpecialistProfileViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.is_authenticated and user.role in ADMIN_ROLES:
             return SpecialistProfileModeratorSerializer
-        if self.action == "list":
-            return SpecialistProfileListSerializer
-        if self.action == "retrieve":
-            return SpecialistProfileDetailSerializer
-        return SpecialistProfileSerializer
+        return {
+            "create": SpecialistProfileCreateSerializer,
+            "update": SpecialistProfileUpdateSerializer,
+            "partial_update": SpecialistProfileUpdateSerializer,
+            "list": SpecialistProfileListSerializer,
+            "retrieve": SpecialistProfileDetailSerializer,
+        }.get(self.action, SpecialistProfileDetailSerializer)
 
 
 class DocumentViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, IsNotBlocked]
 
     def get_permissions(self):
-        if self.action in ("put", "destroy"):
-            return [
-                permissions.IsAuthenticated(),
-                IsNotBlocked(),
-                IsOwnerOrStaff(),
-            ]
+        if self.action in ("update", "partial_update", "destroy"):
+            return [permissions.IsAuthenticated(), IsNotBlocked(), IsOwnerOrStaff()]
         return [permissions.IsAuthenticated(), IsNotBlocked()]
 
     def get_queryset(self):
         user = self.request.user
-        if user.role in ADMIN_ROLES:
+        if user.is_authenticated and user.role in ADMIN_ROLES:
             return Document.objects.all()
         return Document.objects.filter(specialist__user=user)
 
     def get_serializer_class(self):
         user = self.request.user
-        if user.role in ADMIN_ROLES:
+        if user.is_authenticated and user.role in ADMIN_ROLES:
             return DocumentModeratorSerializer
         return DocumentSerializer
 
@@ -130,8 +132,6 @@ class DocumentViewSet(viewsets.ModelViewSet):
         specialist = getattr(user, "specialist_profile", None)
         if specialist is None:
             raise serializers.ValidationError(
-                {
-                    "detail": "You need a specialist profile to upload documents."
-                }
+                {"detail": "You need a specialist profile to upload documents."}
             )
         serializer.save(specialist=specialist)

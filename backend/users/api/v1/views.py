@@ -13,15 +13,15 @@ from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 
 from dj_rest_auth.registration.views import SocialLoginView
 
+from profiles.serializers import (
+    ProfileDetailSerializer,
+    SpecialistProfileDetailSerializer
+)
 from django.conf import settings
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
-from profiles.serializers import (
-    ProfileSerializer,
-    SpecialistProfileDetailSerializer,
-)
 from users.models import User
 from users.api.v1.serializers import (
     RegisterSerializer,
@@ -66,7 +66,7 @@ class UserViewSet(ModelViewSet):
                 request.user.specialist_profile
             )
         elif hasattr(request.user, "profile"):
-            serializer = ProfileSerializer(request.user.profile)
+            serializer = ProfileDetailSerializer(request.user.profile)
         else:
             serializer = MeSerializer(request.user)
         return Response(serializer.data)
