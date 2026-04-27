@@ -32,6 +32,9 @@ class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
         write_only=True, style={"input_type": "password"}
     )
+    confirm_password = serializers.CharField(
+        write_only=True, style={"input_type": "password"}
+    )
     role = serializers.ChoiceField(
         choices=[
             (User.Roles.USER, "User"),
@@ -41,10 +44,12 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["email", "password", "role"]
+        fields = ["email", "password", "confirm_password", "role"]
 
     def validate(self, data):
         user = User(email=data["email"], role=data["role"])
+        if data["password"] != data["confirm_password"]:
+            raise serializers.ValidationError({"confirm_password": "Passwords do not match"})
         try:
             validate_password(data["password"], user)
         except DjangoValidationError as e:
@@ -52,6 +57,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
+        validated_data.pop("confirm_password")
         return User.objects.create_user(**validated_data)
 
 
