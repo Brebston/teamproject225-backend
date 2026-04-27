@@ -555,6 +555,7 @@ Example request:
 {
   "email": "user@example.com",
   "password": "StrongPassword123",
+  "confirm_password": "StrongPassword123",
   "role": "specialist"
 }
 ```
