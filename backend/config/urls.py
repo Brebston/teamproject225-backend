@@ -35,6 +35,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/users/", include("users.api.v1.urls")),
     path("api/v1/profiles/", include("profiles.urls")),
+    path("api/v1/events/", include("events.api.v1.urls")),
     path(
         "api/v1/token/refresh/",
         TokenRefreshView.as_view(),
