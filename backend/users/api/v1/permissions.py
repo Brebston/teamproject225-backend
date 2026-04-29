@@ -28,7 +28,11 @@ class IsOwnerOrStaff(BasePermission):
             request.user.Roles.MODERATOR,
         ]:
             return True
-        owner = getattr(obj, "user", None) or getattr(
-            obj.profile, "user", None
-        )
-        return owner == request.user
+
+        if hasattr(obj, "user"):
+            return obj.user == request.user
+
+        if hasattr(obj, "specialist"):
+            return obj.specialist.user == request.user
+
+        return False
