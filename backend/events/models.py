@@ -55,12 +55,22 @@ class EventImage(models.Model):
         return f"Image for {self.event.id}"
 
 
-class Comments(models.Model):
+class EventLike(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    event = models.ForeignKey(
+        Event, on_delete=models.CASCADE, related_name="likes"
+    )
+
+    class Meta:
+        unique_together = ("user", "event")
+
+
+class Comment(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     event = models.ForeignKey(
         Event, on_delete=models.CASCADE, related_name="comments"
     )
-    text = models.TextField(max_length=255)
+    text = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -70,7 +80,7 @@ class Comments(models.Model):
 class CommentLike(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     comment = models.ForeignKey(
-        Comments, on_delete=models.CASCADE, related_name="likes"
+        Comment, on_delete=models.CASCADE, related_name="likes"
     )
 
     class Meta:
