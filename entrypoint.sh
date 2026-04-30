@@ -2,10 +2,10 @@
 
 set -e
 
-DB_HOST="${DB_HOST:-db}"
-DB_PORT="${DB_PORT:-5432}"
+POSTGRES_HOST="${POSTGRES_HOST:-db}"
+POSTGRES_PORT="${POSTGRES_PORT:-5432}"
 
-while ! nc -z "$DB_HOST" "$DB_PORT"; do
+while ! nc -z "$POSTGRES_HOST" "$POSTGRES_PORT"; do
   sleep 1
 done
 
