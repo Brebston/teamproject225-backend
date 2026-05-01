@@ -6,7 +6,7 @@ from events.api.v1.views import EventViewSet, CommentViewSet
 app_name = "events"
 
 router = DefaultRouter()
-router.register("events", EventViewSet)
+router.register("", EventViewSet)
 router.register("comments", CommentViewSet)
 
 urlpatterns = [

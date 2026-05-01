@@ -44,8 +44,8 @@ class EventSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         images_data = validated_data.pop("images", [])
-        request = self.context.get("request")
-        event = Event.objects.create(author=request.user, **validated_data)
+        # request = self.context.get("request")
+        event = Event.objects.create(**validated_data)
 
         for image in images_data:
             EventImage.objects.create(event=event, **image)
