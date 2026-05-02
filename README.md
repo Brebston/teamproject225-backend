@@ -1,8 +1,36 @@
 # Backend (Django + DRF)
 
-## Description
-Backend for a psychological support platform.  
-A basic user system with roles, access control, and moderation is implemented.
+Backend for a psychological support platform.
+
+The project includes:
+- custom user model with email authentication
+- role-based access control
+- user blocking and moderation
+- JWT authentication
+- Google OAuth login
+- password reset via Celery and Redis
+- user and specialist profiles
+- document uploads
+- media file support
+- Events app with categories, images, likes, comments, and comment likes
+- built-in OpenAPI documentation
+
+---
+
+## Table of Contents
+
+- [API Documentation](#api-documentation)
+- [Authentication](#authentication)
+- [Users and Roles](#users-and-roles)
+- [Profiles and Documents](#profiles-and-documents)
+- [Events App](#events-app)
+- [Password Reset](#password-reset-django--drf--celery)
+- [Google OAuth Login](#google-oauth-login)
+- [Media Support](#media-support)
+- [Project Structure](#project-structure-main-parts)
+- [How to Run](#how-to-run)
+- [Production Notes](#production-notes)
+- [Security Notes](#security-notes)
 
 ---
 
@@ -10,7 +38,7 @@ A basic user system with roles, access control, and moderation is implemented.
 
 The project includes built-in API documentation for convenient endpoint browsing and testing.
 
-### Available links
+### Available Links
 
 - Swagger UI: `http://127.0.0.1:8000/api/v1/schema/swagger/`
 - Redoc: `http://127.0.0.1:8000/api/v1/schema/redoc/`
@@ -23,20 +51,913 @@ These pages allow you to:
 
 ---
 
-## What is implemented
+## Authentication
 
-## OAuth (Google Login)
+The project uses JWT authentication based on refresh and access tokens.
 
-### What is implemented
+### Login
+
+`POST /api/v1/users/login/`
+
+Response:
+
+```json
+{
+  "access": "access_token",
+  "refresh": "refresh_token"
+}
+```
+
+- `access` token is used to authenticate requests
+- `refresh` token is used to obtain a new access token or to logout
+
+### Authorization Header
+
+For protected endpoints, send:
+
+```http
+Authorization: Bearer <access_token>
+```
+
+---
+
+### Logout
+
+`POST /api/v1/users/logout/`
+
+Headers:
+
+```http
+Authorization: Bearer <access_token>
+```
+
+Body:
+
+```json
+{
+  "refresh": "your_refresh_token"
+}
+```
+
+### How Logout Works
+
+- Logout blacklists the refresh token
+- After logout:
+  - refresh token can no longer be used
+  - an access token remains valid until it expires
+
+### Important
+
+- Access token lifetime is limited, for example 5 minutes
+- After access token expiration, the user must log in again or refresh the token
+- This is standard JWT behavior
+
+---
+
+## Users and Roles
+
+### Implemented
+
+- custom `User` model
+- email-based authentication without username
+- `is_blocked` field for user blocking
+
+### Available Roles
+
+- `user`
+- `specialist`
+- `moderator`
+- `admin`
+
+### Registration
+
+During registration (`POST /api/v1/users/register/`), user must choose a role.
+
+Available roles during registration:
+- `user`
+- `specialist`
+
+Other roles (`moderator`, `admin`) cannot be assigned during registration.
+
+Example request:
+
+```json
+{
+  "email": "user@example.com",
+  "password": "StrongPassword123",
+  "confirm_password": "StrongPassword123",
+  "role": "specialist"
+}
+```
+
+### Registration Flow
+
+#### If role = `user`
+
+1. Register
+2. Create profile:
+
+```http
+POST /api/v1/profiles/user-profiles/
+```
+
+#### If role = `specialist`
+
+1. Register
+2. Create specialist profile:
+
+```http
+POST /api/v1/profiles/specialist-profiles/
+```
+
+3. Upload documents:
+
+```http
+POST /api/v1/profiles/documents/
+```
+
+---
+
+## Access Control
+
+Custom permissions are used:
+- `IsAdminOrModerator`
+- `IsOwnerOrStaff`
+
+Role-based access is implemented in `UserViewSet`.
+
+Only moderator/admin can:
+- change roles
+- block users
+- delete users
+
+Blocked user:
+- cannot login
+- cannot access protected endpoints
+
+---
+
+## API Endpoints
+
+### Users
+
+Main endpoints:
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v1/users/list/` | List users, admin/moderator only |
+| `GET` | `/api/v1/users/list/{id}/` | User details |
+| `POST` | `/api/v1/users/register/` | Create user |
+| `POST` | `/api/v1/users/login/` | Authorize user |
+| `POST` | `/api/v1/users/logout/` | Logout and blacklist refresh token |
+| `POST` | `/api/v1/users/password-reset/` | Request password reset |
+| `POST` | `/api/v1/users/password-reset/confirm/` | Confirm password reset |
+| `DELETE` | `/api/v1/users/list/{id}/` | Delete user |
+| `POST` | `/api/v1/token/verify/` | Verify token |
+| `POST` | `/api/v1/token/refresh/` | Refresh token |
+
+Custom endpoints:
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/v1/users/list/{id}/block/` | Block user |
+| `POST` | `/api/v1/users/list/{id}/change_role/` | Change role |
+| `GET` | `/api/v1/users/list/me/` | Current user |
+
+---
+
+## Profiles and Documents
+
+### Profiles
+
+- profile management for users
+- separate specialist profiles
+- document management for specialist profiles
+- CRUD endpoints for profiles and specialist profiles
+- document upload and deletion endpoints
+
+### Profile Changes
+
+- `user` field is no longer selectable in API forms
+- It is automatically assigned using authenticated user:
+
+```python
+serializer.save(user=request.user)
+```
+
+- In responses, user is shown as email:
+
+```python
+user_email = serializers.EmailField(source="user.email", read_only=True)
+```
+
+### Documents Changes
+
+- `specialist` field is no longer selectable
+- It is automatically assigned:
+
+```python
+serializer.save(specialist=user.specialist_profile)
+```
+
+- Displayed as email:
+
+```python
+specialist = serializers.EmailField(source="specialist.user.email", read_only=True)
+```
+
+### Document Upload Rules
+
+- Only users with role `specialist` can upload documents
+- Specialist must have a profile before uploading documents
+
+### Security Improvements
+
+- Cannot create profile for another user
+- Cannot assign document to another specialist
+- Ownership is enforced via `request.user`
+- Related fields are read-only
+
+---
+
+### API Endpoints: Profiles
+
+#### User Profiles
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v1/profiles/user-profiles/` | List profiles |
+| `POST` | `/api/v1/profiles/user-profiles/` | Create profile |
+| `GET` | `/api/v1/profiles/user-profiles/{id}/` | Retrieve profile details |
+| `PUT` | `/api/v1/profiles/user-profiles/{id}/` | Update profile |
+| `PATCH` | `/api/v1/profiles/user-profiles/{id}/` | Partially update profile |
+| `DELETE` | `/api/v1/profiles/user-profiles/{id}/` | Delete profile |
+
+#### Specialist Profiles
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v1/profiles/specialist-profiles/` | List specialist profiles |
+| `POST` | `/api/v1/profiles/specialist-profiles/` | Create specialist profile |
+| `GET` | `/api/v1/profiles/specialist-profiles/{id}/` | Retrieve specialist profile details |
+| `PUT` | `/api/v1/profiles/specialist-profiles/{id}/` | Update specialist profile |
+| `PATCH` | `/api/v1/profiles/specialist-profiles/{id}/` | Partially update specialist profile |
+| `DELETE` | `/api/v1/profiles/specialist-profiles/{id}/` | Delete specialist profile |
+
+#### Documents
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v1/profiles/documents/` | List documents |
+| `POST` | `/api/v1/profiles/documents/` | Upload document |
+| `GET` | `/api/v1/profiles/documents/{id}/` | Retrieve document details |
+| `PATCH` | `/api/v1/profiles/documents/{id}/` | Partially update document |
+| `DELETE` | `/api/v1/profiles/documents/{id}/` | Delete a document |
+
+---
+
+# Events App
+
+## Overview
+
+The Events app provides functionality for:
+- event categories with images
+- events with up to 6 images
+- event description limited to 300 characters
+- event likes
+- comments under events
+- comment likes
+- displaying commentator avatar
+- displaying commentator full name
+- displaying comment creation time
+- role-based event creation
+
+---
+
+## Events Permissions
+
+### View Events
+
+Everyone can view events.
+
+### Create Events
+
+Only the following users can create events:
+- authenticated users with `specialist_profile`
+- admin users with `is_staff=True`
+
+Regular users without a specialist profile cannot create events.
+
+### Edit/Delete Events
+
+Only the event author can edit or delete their own event.
+
+### Categories
+
+Category permissions depend on the current `CategoryViewSet` configuration:
+- if `IsAuthenticatedOrReadOnly` is used, authenticated users can create/edit/delete categories
+- if `IsAdminUser` is used, only admins can create/edit/delete categories
+
+Recommended production option:
+
+```python
+from rest_framework.permissions import IsAdminUser
+
+permission_classes = [IsAdminUser]
+```
+
+### Likes and Comments
+
+Only authenticated users can:
+- like/unlike events
+- create comments
+- like/unlike comments
+
+---
+
+## Events Models
+
+### Category
+
+Fields:
+- `name`
+- `image`
+
+Purpose:
+- stores event category name and category photo
+
+---
+
+### Event
+
+Fields:
+- `title`
+- `description`
+- `category`
+- `author`
+- `created_at`
+- `updated_at`
+
+Rules:
+- `description` has max length of 300 characters
+- `author` is assigned automatically from `request.user`
+- event can have up to 6 images
+
+Computed fields:
+- `likes_count`
+- `comments_count`
+
+---
+
+### EventImage
+
+Fields:
+- `event`
+- `image`
+
+Rules:
+- one event can have multiple images
+- maximum allowed images per event: 6
+
+---
+
+### EventLike
+
+Fields:
+- `user`
+- `event`
+
+Rules:
+- one user can like one event only once
+- repeated like request works as toggle:
+  - first request adds like
+  - second request removes like
+
+Recommended model string representation:
+
+```python
+def __str__(self):
+    profile = getattr(self.user, "profile", None)
+    specialist = getattr(self.user, "specialist_profile", None)
+
+    if profile:
+        name = f"{profile.first_name} {profile.last_name}".strip()
+    elif specialist:
+        name = f"{specialist.first_name} {specialist.last_name}".strip()
+    else:
+        name = self.user.email
+
+    return f"{name} liked {self.event.title}"
+```
+
+---
+
+### Comment
+
+Fields:
+- `event`
+- `user`
+- `text`
+- `created_at`
+- `updated_at`
+
+Rules:
+- comment is attached to a specific event
+- `user` is assigned automatically from `request.user`
+
+---
+
+### CommentLike
+
+Fields:
+- `user`
+- `comment`
+
+Rules:
+- one user can like one comment only once
+- repeated like request works as toggle:
+  - first request adds like
+  - second request removes like
+
+Recommended model string representation:
+
+```python
+def __str__(self):
+    return f"{self.user} likes comment {self.comment.id}"
+```
+
+---
+
+## Events API Endpoints
+
+### Event Categories
+
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `GET` | `/api/v1/events/categories/` | List event categories | Public |
+| `POST` | `/api/v1/events/categories/` | Create event category | Auth/Admin, depending on permission |
+| `GET` | `/api/v1/events/categories/{id}/` | Retrieve event category | Public |
+| `PUT` | `/api/v1/events/categories/{id}/` | Update event category | Auth/Admin, depending on permission |
+| `PATCH` | `/api/v1/events/categories/{id}/` | Partially update event category | Auth/Admin, depending on permission |
+| `DELETE` | `/api/v1/events/categories/{id}/` | Delete event category | Auth/Admin, depending on permission |
+
+---
+
+### Events
+
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `GET` | `/api/v1/events/` | List events | Public |
+| `POST` | `/api/v1/events/` | Create event | Specialist/Admin |
+| `GET` | `/api/v1/events/{id}/` | Retrieve event details | Public |
+| `PUT` | `/api/v1/events/{id}/` | Update event | Event author |
+| `PATCH` | `/api/v1/events/{id}/` | Partially update event | Event author |
+| `DELETE` | `/api/v1/events/{id}/` | Delete event | Event author |
+
+---
+
+### Event Likes
+
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `POST` | `/api/v1/events/{id}/like/` | Like/unlike event | Authenticated |
+
+Response examples:
+
+```json
+{
+  "detail": "Event liked"
+}
+```
+
+```json
+{
+  "detail": "Event unliked"
+}
+```
+
+---
+
+### Event Comments
+
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `GET` | `/api/v1/events/{id}/comments/` | List comments under event | Public |
+| `POST` | `/api/v1/events/{id}/comments/` | Create comment under event | Authenticated |
+
+Example request:
+
+```json
+{
+  "event": 5,
+  "text": "Great event!"
+}
+```
+
+Example response:
+
+```json
+{
+  "id": 1,
+  "event": 5,
+  "user": 2,
+  "user_full_name": "John Smith",
+  "user_avatar": "/media/uploads/profiles/avatar.jpg",
+  "text": "Great event!",
+  "likes_count": 0,
+  "created_at": "2026-04-29T12:00:00Z",
+  "updated_at": "2026-04-29T12:00:00Z"
+}
+```
+
+---
+
+### Comment Likes
+
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `POST` | `/api/v1/events/comments/{id}/like/` | Like/unlike comment | Authenticated |
+
+Response examples:
+
+```json
+{
+  "detail": "Comment liked"
+}
+```
+
+```json
+{
+  "detail": "Comment unliked"
+}
+```
+
+---
+
+## Events Request Examples
+
+### Create Event With Images
+
+Request type: `multipart/form-data`
+
+Endpoint:
+
+```http
+POST /api/v1/events/
+```
+
+Headers:
+
+```http
+Authorization: Bearer <access_token>
+Content-Type: multipart/form-data
+```
+
+Form data:
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `title` | string | yes | Event title |
+| `description` | string | yes | Max 300 characters |
+| `category` | integer | yes | Category ID |
+| `images` | file[] | no | Max 6 images |
+
+Example form-data:
+
+```text
+title: Group therapy meeting
+description: Short event description up to 300 characters.
+category: 1
+images: image1.jpg
+images: image2.png
+```
+
+---
+
+## Events Image Upload Rules
+
+Recommended validation rules:
+- maximum 6 images per event
+- allowed image types:
+  - JPEG
+  - PNG
+  - WEBP
+- recommended maximum file size: 5 MB per image
+
+Recommended validation helper:
+
+```python
+MAX_EVENT_IMAGES = 6
+MAX_IMAGE_SIZE = 5 * 1024 * 1024
+ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"]
+
+
+def validate_event_images(images):
+    if len(images) > MAX_EVENT_IMAGES:
+        return "Maximum 6 images allowed."
+
+    for image in images:
+        if image.content_type not in ALLOWED_IMAGE_TYPES:
+            return "Only JPEG, PNG and WEBP images are allowed."
+
+        if image.size > MAX_IMAGE_SIZE:
+            return "Each image must be smaller than 5 MB."
+
+    return None
+```
+
+Usage in `EventViewSet.create()`:
+
+```python
+images = request.FILES.getlist("images")
+
+image_error = validate_event_images(images)
+if image_error:
+    return Response(
+        {"images": image_error},
+        status=status.HTTP_400_BAD_REQUEST,
+    )
+```
+
+---
+
+## Events Full Name Logic
+
+User first name and last name are stored in profile models, not directly in the `User` model.
+
+Full name should be resolved in this order:
+1. `profile`
+2. `specialist_profile`
+3. fallback to `email`
+
+Recommended helper:
+
+```python
+def get_user_full_name(user):
+    profile = getattr(user, "profile", None)
+    if profile:
+        full_name = f"{profile.first_name} {profile.last_name}".strip()
+        if full_name:
+            return full_name
+
+    specialist_profile = getattr(user, "specialist_profile", None)
+    if specialist_profile:
+        full_name = (
+            f"{specialist_profile.first_name} "
+            f"{specialist_profile.last_name}"
+        ).strip()
+        if full_name:
+            return full_name
+
+    return user.email
+```
+
+Recommended avatar helper:
+
+```python
+def get_user_avatar(user):
+    profile = getattr(user, "profile", None)
+    if profile and profile.avatar:
+        return profile.avatar.url
+
+    specialist_profile = getattr(user, "specialist_profile", None)
+    if specialist_profile and specialist_profile.avatar:
+        return specialist_profile.avatar.url
+
+    return None
+```
+
+---
+
+## Events Performance Notes
+
+Recommended queryset optimization:
+
+```python
+Event.objects.select_related(
+    "author",
+    "author__profile",
+    "author__specialist_profile",
+    "category",
+).prefetch_related(
+    "images",
+    "likes",
+    "comments",
+).order_by("-created_at")
+```
+
+For comments:
+
+```python
+Comment.objects.select_related(
+    "event",
+    "user",
+    "user__profile",
+    "user__specialist_profile",
+).prefetch_related("likes")
+```
+
+---
+
+## Events Testing Checklist
+
+Before merging Events app, test:
+
+- create category with image
+- list categories
+- update category
+- delete category
+- create event without images
+- create event with 1 image
+- create event with 6 images
+- try to create event with 7 images and expect `400 Bad Request`
+- try to upload unsupported file type and expect `400 Bad Request`
+- try to create event with description longer than 300 characters and expect `400 Bad Request`
+- regular user without specialist profile cannot create event
+- specialist profile user can create event
+- admin can create event
+- event author can update/delete own event
+- another user cannot update/delete someone else's event
+- public user can list and retrieve events
+- authenticated user can like event
+- repeated like request removes event like
+- authenticated user can create comment under event
+- public user can list comments under event
+- authenticated user can like comment
+- repeated like request removes comment like
+- comment response includes:
+  - commentator avatar
+  - commentator full name
+  - created time
+  - comment text
+  - likes count
+
+---
+
+# Password Reset (Django + DRF + Celery)
+
+## Overview
+
+Password reset functionality is implemented using:
+- Django built-in token generator
+- DRF endpoints
+- Celery for async email sending
+- Redis as broker
+
+Flow:
+1. User sends email
+2. Backend generates uid + token
+3. Sends reset link via Celery task
+4. User opens link
+5. User sends new password
+6. Password is updated
+
+---
+
+## `.env` Configuration
+
+Add the following variables:
+
+```env
+FRONTEND_URL=http://localhost:5173
+# for backend-only testing:
+# FRONTEND_URL=http://127.0.0.1:8000/api/v1/users
+
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=your_email@gmail.com
+EMAIL_HOST_PASSWORD=your_app_password
+
+CELERY_BROKER_URL=redis://localhost:6379/0
+CELERY_RESULT_BACKEND=redis://localhost:6379/0
+```
+
+### `EMAIL_HOST_PASSWORD` for Google
+
+This is not your Gmail password.
+
+You must generate an App Password:
+
+1. Go to Google Account -> Security
+2. Enable 2FA
+3. Go to: `https://myaccount.google.com/apppasswords`
+4. Generate password for "Mail"
+5. Use it as `EMAIL_HOST_PASSWORD`
+
+---
+
+## Redis (Celery) via Docker
+
+To run Redis locally for Celery, use Docker.
+
+### Run Redis Container
+
+```bash
+docker run -d -p 6379:6379 --name redis redis
+```
+
+### Check if Container Is Running
+
+```bash
+docker ps
+```
+
+### Stop Redis
+
+```bash
+docker stop redis
+```
+
+### Start Again
+
+```bash
+docker start redis
+```
+
+---
+
+## Celery Start
+
+Open a new terminal:
+
+```bash
+cd backend
+celery -A config worker -l info
+```
+
+For Windows:
+
+```bash
+celery -A config worker -l info -P solo
+```
+
+### Notes
+
+- Redis must be running before starting Celery
+- Default port: `6379`
+- Broker URL must match `.env`:
+
+```env
+CELERY_BROKER_URL=redis://localhost:6379/0
+```
+
+---
+
+## Password Reset Endpoints
+
+### Request Reset
+
+`POST /api/v1/users/password-reset/`
+
+Request:
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+Response:
+
+```json
+{
+  "detail": "If this email exists, reset link was generated."
+}
+```
+
+### Reset Password: GET for Testing
+
+`GET /api/v1/users/password-reset/confirm/?uid=...&token=...`
+
+### Confirm Reset
+
+`POST /api/v1/users/password-reset/confirm/`
+
+Request:
+
+```json
+{
+  "uid": "...",
+  "token": "...",
+  "password": "NewPass123!",
+  "confirm_password": "NewPass123!"
+}
+```
+
+---
+
+# Google OAuth Login
+
+## What Is Implemented
 
 Google OAuth authentication is implemented using:
-- django-allauth
-- dj-rest-auth
-- JWT (SimpleJWT)
+- `django-allauth`
+- `dj-rest-auth`
+- JWT with SimpleJWT
 
 Custom logic:
-- Blocking login for users with `is_blocked=True`
-- Auto-connecting existing users by email
+- blocking login for users with `is_blocked=True`
+- auto-connecting existing users by email
 - JWT tokens returned after Google login
 
 ---
@@ -48,19 +969,20 @@ Custom logic:
 3. Enable:
    - Google People API
    - OAuth2
-
 4. Create OAuth Client ID:
    - Type: Web application
 
-### Authorized redirect URIs (IMPORTANT)
+### Authorized Redirect URIs
 
-For development (React):
-```
+For development with React:
+
+```text
 http://localhost:5173/auth/google/callback
 ```
 
 For backend-only testing:
-```
+
+```text
 http://127.0.0.1:8000/accounts/google/login/callback/
 ```
 
@@ -70,28 +992,24 @@ http://127.0.0.1:8000/accounts/google/login/callback/
 
 Already configured:
 
-- SITE_ID = 1
-- REST_USE_JWT = True
+```python
+SITE_ID = 1
+REST_USE_JWT = True
+```
+
+Also configured:
 - JWT enabled
-- allauth + google provider
+- allauth and Google provider
 
-See settings:
-
-(see settings.py)
-
+See `settings.py`.
 
 ---
 
 ## Google Login Endpoint
 
-### Endpoint
+`POST /api/v1/users/google/`
 
-POST:
-```
-/api/v1/users/google/
-```
-
-### Request
+Request:
 
 ```json
 {
@@ -99,7 +1017,7 @@ POST:
 }
 ```
 
-### Response
+Response:
 
 ```json
 {
@@ -116,395 +1034,102 @@ POST:
 
 ---
 
-## Flow (React + Backend)
+## Flow: React + Backend
 
-1. React → Google OAuth
-2. Google → redirect to:
-```
+1. React starts Google OAuth
+2. Google redirects to:
+
+```text
 http://localhost:5173/auth/google/callback
 ```
 
 3. React extracts `access_token`
-4. React sends POST to backend:
-```
-/api/v1/users/google/
+4. React sends POST request to backend:
+
+```http
+POST /api/v1/users/google/
 ```
 
 5. Backend:
-- verifies token via Google
-- creates / gets user
-- returns JWT tokens
+   - verifies token via Google
+   - creates or gets user
+   - returns JWT tokens
 
 6. React:
-- stores token
-- sends Authorization header
-
----
-
-# Password Reset (Django + DRF + Celery)
-
-## Overview
-
-We implemented password reset functionality using Django built-in token generator, DRF endpoints, and Celery for async email sending.
-
-Flow:
-1. User sends email
-2. Backend generates uid + token
-3. Sends reset link (Celery task)
-4. User opens link
-5. Sends new password
-6. Password updated
-
----
-
-## .env configuration
-
-Add the following variables:
-
-```
-FRONTEND_URL=http://localhost:5173 for frontend or http://127.0.0.1:8000/api/v1/users for backend-only
-
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_HOST_USER=your_email@gmail.com
-EMAIL_HOST_PASSWORD=your_app_password
-
-CELERY_BROKER_URL=redis://localhost:6379/0
-CELERY_RESULT_BACKEND=redis://localhost:6379/0
-```
-
-
-
-### EMAIL_HOST_PASSWORD (Google)
-
-This is NOT your Gmail password.
-
-You must generate **App Password**:
-
-1. Go to Google Account → Security
-2. Enable 2FA
-3. Go to:
-   https://myaccount.google.com/apppasswords
-4. Generate password for "Mail"
-5. Use it as EMAIL_HOST_PASSWORD
-
----
-
-## Redis (Celery) via Docker
-
-To run Redis locally for Celery, use Docker:
-
-### Run Redis container
-
-```bash
-docker run -d -p 6379:6379 --name redis redis
-```
-
-### Сheck if container is running
-
-```bash
-docker ps
-```
-
-### Stop Redis
-
-```bash
-docker stop redis
-```
-
-### Start again
-
-```bash
-docker start redis
-```
-
----
-
-## Celery start
-
-Open a new terminal:
-
-```bash
-cd backend
-celery -A config worker -l info
-```
-
-### For Windows:
-
-```bash
-celery -A config worker -l info -P solo
-```
-
----
-
-## Notes
-
-- Redis must be running before starting Celery
-- Default port: `6379`
-- Broker URL must match `.env`:
-
-```
-CELERY_BROKER_URL=redis://localhost:6379/0
-```
-
-
-## Endpoints
-
-### 1. Request reset
-
-POST `/api/v1/users/password-reset/`
-
-```
-{
-  "email": "user@example.com"
-}
-```
-
-Response:
-```
-{
-  "detail": "If this email exists, reset link was generated."
-}
-```
-
----
-
-### 2. Reset password (GET for testing)
-
-GET `/api/v1/users/password-reset/confirm/?uid=...&token=...`
-
----
-
-### 3. Confirm reset
-
-POST `/api/v1/users/password-reset/confirm/`
-
-```
-{
-  "uid": "...",
-  "token": "...",
-  "password": "NewPass123!",
-  "confirm_password": "NewPass123!"
-}
-```
-
----
-
-## Production notes
-
-- Use Celery + Redis
-- Use HTTPS
-- Do not expose user existence
-- Use strong password validation
-
-## Blocking users
-
-- Implemented via `is_blocked`
-- Applied in:
-  - JWT login
-  - Google OAuth
-  - Permissions
-
-Blocked user:
-- cannot login
-- cannot access endpoints
-
----
-
-## Notes
-
-- Callback URL must match Google Console exactly
-- React must be running for frontend callback
-- Backend-only flow uses `/accounts/google/login/`
-
----
-
-### Users and Roles
-- custom `User` model
-- roles:
-  - `user`
-  - `specialist`
-  - `moderator`
-  - `admin`
-- email-based authentication (no username)
-- `is_blocked` field for user blocking
-
-### Access Control
-- custom permissions `IsAdminOrModerator` & `IsOwnerOrStaff`
-- role-based access in `UserViewSet`
-- only moderator/admin can:
-  - change roles
-  - block users
-  - delete users
-
-### Profiles
-- profile management for users
-- separate specialist profiles
-- document management for profiles
-- CRUD endpoints for profiles and specialist profiles
-- document upload and deletion endpoints
-
-### API (users)
-
-Main endpoints:
-- `GET api/v1/users/list/` — list users (admin/moderator)
-- `GET api/v1/users/list/{id}/` — user details
-- `POST api/v1/users/register/` — create user
-- `POST api/v1/users/login/` — authorize user
-- `POST api/v1/users/logout/` — logout (blacklist refresh token)
-- `POST /api/v1/users/password-reset/` - reset password
-- `POST /api/v1/users/password-reset/confirm/` - confirm reset password
-- `DELETE /users/list/{id}/` — delete user
-- `POST api/v1/token/verify/` — verify token
-- `POST api/v1/token/refresh/` — refresh token
-
-Custom endpoints:
-- `POST api/v1/users/list/{id}/block/` — block user
-- `POST api/v1/users/list/{id}/change_role/` — change role
-- `GET api/v1/users/list/me/` — current user
-
-### API (profiles)
-
-Profiles:
-- `GET api/v1/profiles/user-profiles/` — list profiles
-- `POST api/v1/profiles/user-profiles/` — create profile
-- `GET api/v1/profiles/user-profiles/{id}/` — retrieve profile details
-- `PUT api/v1/profiles/user-profiles/{id}/` — update profile
-- `PATCH api/v1/profiles/user-profiles/{id}/` — partially update profile
-- `DELETE api/v1/profiles/user-profiles/{id}/` — delete profile
-
-Specialist profiles:
-- `GET api/v1/profiles/specialist-profiles/` — list specialist profiles
-- `POST api/v1/profiles/specialist-profiles/` — create specialist profile
-- `GET api/v1/profiles/specialist-profiles/{id}/` — retrieve specialist profile details
-- `PUT api/v1/profiles/specialist-profiles/{id}/` — update specialist profile
-- `PATCH api/v1/profiles/specialist-profiles/{id}/` — partially update specialist profile
-- `DELETE api/v1/profiles/specialist-profiles/{id}/` — delete specialist profile
-
-Documents:
-- `GET api/v1/profiles/documents/` — list documents
-- `POST api/v1/profiles/documents/` — upload document
-- `GET api/v1/profiles/documents/{id}/` — retrieve document details
-- `PATCH api/v1/profiles/documents/{id}/` — partially update document
-- `DELETE api/v1/profiles/documents/{id}/` — delete a document
+   - stores token
+   - sends Authorization header in future requests
 
 ---
 
 ## Media Support
 
-- Added `MEDIA_ROOT` and `MEDIA_URL` to enable serving uploaded files  
+- Added `MEDIA_ROOT` and `MEDIA_URL` to enable serving uploaded files
 - Added upload paths for:
-  - profile avatars  
-  - specialist avatars  
-  - specialist documents  
+  - profile avatars
+  - specialist avatars
+  - specialist documents
+  - event category images
+  - event images
 
 Uploaded files are stored under the `uploads/` directory with automatically generated filenames.
 
-## Authentication (JWT)
-
-The project uses JWT authentication based on refresh and access tokens.
-
-### Login
-
-`POST /api/v1/users/login/`
-
-Response:
-```json
-{
-  "access": "access_token",
-  "refresh": "refresh_token"
-}
-```
-
-- `access` token is used to authenticate requests
-- `refresh` token is used to obtain a new access token or to logout
-
 ---
 
-### Logout
+## Project Structure (Main Parts)
 
-`POST /api/v1/users/logout/`
-
-Headers:
-```
-Authorization: Bearer <access_token>
-```
-
-Body:
-```json
-{
-  "refresh": "your_refresh_token"
-}
-```
-
-### How it works
-
-- Logout blacklists the refresh token
-- After logout:
-  - refresh token can no longer be used
-  - an access token remains valid until it expires
-
----
-
-### Important
-
-- Access token lifetime is limited (e.g. 5 minutes)
-- After expiration, the user must log in again
-- This is standard JWT behavior
-
----
-
-### Security notes
-
-- Blocked users cannot:
-  - login
-  - access protected endpoints
-- All requests are checked with custom permissions
-- The minimum password length is 8 characters, and the maximum is 128
-
----
-
-## Project structure (main parts)
-
-```
+```text
 teamproject225-backend/
 ├── .github/workflows/
-│ ├── backend-ci.yml
-│ └── python-check.yml
+│   ├── backend-ci.yml
+│   └── python-check.yml
 ├── backend/
-│ ├── __init__.py
-│ ├── .env.example
-│ ├── config/ # Django settings, urls, asgi, wsgi, celery
-│ ├── users/
-│ │ ├── api/
-│ │ │ └── v1/ # API versioning
-│ │ │   ├── permissions.py
-│ │ │   ├── serializers.py
-│ │ │   ├── tasks.py
-│ │ │   ├── validators.py
-│ │ │   ├── urls.py
-│ │ │   └── views.py
-│ │ ├── migrations/
-│ │ ├── __init__.py
-│ │ ├── admin.py # admin configuration
-│ │ ├── apps.py
-│ │ ├── models.py # User model
-│ │ ├── selectors.py # data access layer
-│ │ ├── services.py # business logic
-│ │ └── social_adapter.py # OAuth logic
-│ ├── profiles/
-│ │ ├── migrations/
-│ │ ├── __init__.py
-│ │ ├── admin.py
-│ │ ├── apps.py
-│ │ ├── models.py
-│ │ ├── serializers.py
-│ │ ├── urls.py
-│ │ └── views.py
-│ ├── __init__.py
-│ ├── manage.py
-│ ├── .env.example
-│ └── requirements.txt
+│   ├── __init__.py
+│   ├── .env.example
+│   ├── config/                  # Django settings, urls, asgi, wsgi, celery
+│   ├── users/
+│   │   ├── api/
+│   │   │   └── v1/              # API versioning
+│   │   │       ├── permissions.py
+│   │   │       ├── serializers.py
+│   │   │       ├── tasks.py
+│   │   │       ├── validators.py
+│   │   │       ├── urls.py
+│   │   │       └── views.py
+│   │   ├── migrations/
+│   │   ├── __init__.py
+│   │   ├── admin.py             # admin configuration
+│   │   ├── apps.py
+│   │   ├── models.py            # User model
+│   │   ├── selectors.py         # data access layer
+│   │   ├── services.py          # business logic
+│   │   └── social_adapter.py    # OAuth logic
+│   ├── profiles/
+│   │   ├── migrations/
+│   │   ├── __init__.py
+│   │   ├── admin.py
+│   │   ├── apps.py
+│   │   ├── models.py
+│   │   ├── serializers.py
+│   │   ├── urls.py
+│   │   └── views.py
+│   ├── events/
+│   │   ├── api/
+│   │   │   └── v1/
+│   │   │       ├── permissions.py
+│   │   │       ├── serializers.py
+│   │   │       ├── urls.py
+│   │   │       └── views.py
+│   │   ├── migrations/
+│   │   ├── __init__.py
+│   │   ├── admin.py
+│   │   ├── apps.py
+│   │   ├── utils.py
+│   │   ├── services.py
+│   │   └── models.py
+│   ├── __init__.py
+│   ├── manage.py
+│   ├── .env.example
+│   └── requirements.txt
 ├── .dockerignore
 ├── .gitignore
 ├── Dockerfile
@@ -513,21 +1138,29 @@ teamproject225-backend/
 
 ---
 
-## How to run
+## How to Run
 
 Create a `.env` file in the `backend/` directory and add:
+
+```env
 SECRET_KEY=your-secret-key
+```
 
 You can generate a Django secret key using:
-- https://djecrety.ir/
+- `https://djecrety.ir/`
 - or via command:
-  ```bash
-  python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
-  ```
+
+```bash
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+### Local Setup
 
 ```bash
 python -m venv venv
-venv\Scripts\activate      # Windows
+
+# Windows
+venv\Scripts\activate
 
 pip install -r requirements.txt
 
@@ -538,86 +1171,27 @@ python manage.py runserver
 
 ---
 
-## Updates (Registration, Profiles, Documents)
+## Production Notes
 
-### Registration
-
-During registration (`POST api/v1/users/register/`), user must choose a role:
-
-Available roles:
-- `user`
-- `specialist`
-
-Other roles (`moderator`, `admin`) cannot be assigned during registration.
-
-Example request:
-```json
-{
-  "email": "user@example.com",
-  "password": "StrongPassword123",
-  "confirm_password": "StrongPassword123",
-  "role": "specialist"
-}
-```
+- Use Celery + Redis
+- Use HTTPS
+- Do not expose user existence during password reset
+- Use strong password validation
+- Store secrets only in environment variables
+- Do not commit `.env`
+- Configure allowed hosts and CORS for production frontend
+- Use proper media storage for production deployments
 
 ---
 
-### Registration flow
+## Security Notes
 
-#### If role = `user`
-1. Register
-2. Create profile:
-   POST `/api/v1/profiles/user-profiles/`
-
-#### If role = `specialist`
-1. Register
-2. Create specialist profile:
-   POST `/api/v1/profiles/specialist-profiles/`
-3. Upload documents:
-   POST `/api/v1/profiles/documents/`
-
----
-
-### Profiles changes
-
-- `user` field is no longer selectable in API forms
-- It is automatically assigned using authenticated user:
-```python
-serializer.save(user=request.user)
-```
-
-- In responses, user is shown as email:
-```python
-user_email = serializers.EmailField(source="user.email", read_only=True)
-```
-
----
-
-### Documents changes
-
-- `specialist` field is no longer selectable
-- It is automatically assigned:
-```python
-serializer.save(specialist=user.specialist_profile)
-```
-
-- Displayed as email:
-```python
-specialist = serializers.EmailField(source="specialist.user.email", read_only=True)
-```
-
----
-
-### Document upload rules
-
-- Only users with role `specialist` can upload documents
-- Specialist must have a profile before uploading documents
-
----
-
-### Security improvements
-
-- Cannot create profile for another user
-- Cannot assign document to another specialist
-- Ownership is enforced via `request.user`
-- Related fields are read-only
+- Blocked users cannot:
+  - login
+  - access protected endpoints
+- All protected requests are checked with custom permissions
+- The minimum password length is 8 characters
+- The maximum password length is 128 characters
+- Event author is assigned automatically from `request.user`
+- Profile/document ownership is enforced via `request.user`
+- Related fields are read-only where users should not manually assign ownership
