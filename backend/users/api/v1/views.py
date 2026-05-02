@@ -149,7 +149,7 @@ class LogoutView(APIView):
 class GoogleLoginView(SocialLoginView):
     adapter_class = GoogleOAuth2Adapter
     client_class = OAuth2Client
-    callback_url = "http://localhost:5173/auth/google/callback"
+    callback_url = f"{settings.FRONTEND_URL.rstrip('/')}/auth/google/callback"
 
     def post(self, request, *args, **kwargs):
         super().post(request, *args, **kwargs)
@@ -191,7 +191,7 @@ class PasswordResetRequestView(APIView):
             token = PasswordResetTokenGenerator().make_token(user)
 
             reset_link = (
-                f"http://127.0.0.1:8000/api/v1/users/password-reset/confirm/"
+                f"{settings.FRONTEND_URL.rstrip('/')}/password-reset/confirm/"
                 f"?uid={uid}&token={token}"
             )
 
