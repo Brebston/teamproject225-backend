@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from events.models import Category, EventImage, Event, Comment
+from events.utils import get_user_full_name, get_user_avatar
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -16,79 +17,61 @@ class EventImageSerializer(serializers.ModelSerializer):
 
 
 class EventSerializer(serializers.ModelSerializer):
-    category_id = serializers.PrimaryKeyRelatedField(
-        queryset=Category.objects.all(),
-        write_only=True,
-        source="category",
+    description = serializers.CharField(max_length=300)
+    images = EventImageSerializer(many=True, read_only=True)
+    category_name = serializers.CharField(
+        source="category.name", read_only=True
     )
-    category = CategorySerializer(read_only=True)
-    images = EventImageSerializer(many=True, required=False)
-    likes_count = serializers.IntegerField(
-        source="likes.count", read_only=True
-    )
-    comments_count = serializers.IntegerField(
-        source="comments.count", read_only=True
-    )
-    author_name = serializers.CharField(
-        source="author.get_full_name", read_only=True
-    )
+    author = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    author_full_name = serializers.SerializerMethodField()
+    likes_count = serializers.IntegerField(read_only=True)
+    comments_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Event
         fields = [
             "id",
-            "category_id",
-            "category",
             "title",
             "description",
+            "category",
+            "category_name",
+            "author",
+            "author_full_name",
             "images",
             "likes_count",
             "comments_count",
-            "author_name",
             "created_at",
+            "updated_at",
         ]
+        read_only_fields = ["author", "created_at", "updated_at"]
 
-    def validate_images(self, value):
-        if len(value) > 6:
-            raise serializers.ValidationError("Max 6 images allowed")
-        return value
-
-    def create(self, validated_data):
-        images_data = validated_data.pop("images", [])
-        request = self.context.get("request")
-        event = Event.objects.create(author=request.user, **validated_data)
-
-        for image in images_data:
-            EventImage.objects.create(event=event, **image)
-
-        return event
+    def get_author_full_name(self, obj):
+        return get_user_full_name(obj.author)
 
 
 class CommentSerializer(serializers.ModelSerializer):
-    user_name = serializers.CharField(
-        source="user.get_full_name", read_only=True
-    )
+    user_full_name = serializers.SerializerMethodField()
     user_avatar = serializers.SerializerMethodField()
-    likes_count = serializers.IntegerField(
-        source="likes.count", read_only=True
-    )
+    likes_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Comment
         fields = [
             "id",
-            "user",
             "event",
-            "text",
-            "user_name",
+            "user",
+            "user_full_name",
             "user_avatar",
+            "text",
             "likes_count",
             "created_at",
+            "updated_at",
         ]
 
-        extra_kwargs = {"user": {"read_only": True}}
+        read_only_fields = ["user", "created_at", "updated_at"]
+
+    def get_user_full_name(self, obj):
+        return get_user_full_name(obj.user)
 
     def get_user_avatar(self, obj):
-        if hasattr(obj.user, "avatar") and obj.user.profile.avatar:
-            return obj.user.avatar.url
-        return None
+        return get_user_avatar(obj.user)
