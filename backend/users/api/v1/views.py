@@ -15,7 +15,7 @@ from dj_rest_auth.registration.views import SocialLoginView
 
 from profiles.serializers import (
     ProfileDetailSerializer,
-    SpecialistProfileDetailSerializer
+    SpecialistProfileDetailSerializer,
 )
 from django.conf import settings
 from django.contrib.auth.tokens import PasswordResetTokenGenerator

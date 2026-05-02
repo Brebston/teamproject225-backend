@@ -35,7 +35,10 @@ class Profile(models.Model):
 
     class Education(models.TextChoices):
         PSYCHOLOGIST = "psychologist", "Psychologist"
-        TRAUMA_INFORMED_EDUCATOR = "trauma informed educator", "Trauma informed educator"
+        TRAUMA_INFORMED_EDUCATOR = (
+            "trauma informed educator",
+            "Trauma informed educator",
+        )
         OTHER = "other", "Other"
 
     user = models.OneToOneField(
@@ -66,7 +69,9 @@ class Profile(models.Model):
     bio = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    data_processing_consent_accepted_at = models.DateTimeField(null=True, blank=True)
+    data_processing_consent_accepted_at = models.DateTimeField(
+        null=True, blank=True
+    )
 
     class Meta:
         verbose_name = "Profile"
@@ -84,7 +89,9 @@ class SpecialistProfile(models.Model):
     )
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150)
-    avatar = models.ImageField(upload_to=specialist_avatar_file_path, null=True, blank=True)
+    avatar = models.ImageField(
+        upload_to=specialist_avatar_file_path, null=True, blank=True
+    )
     phone = PhoneNumberField(region="UA")
     city = models.CharField(max_length=150)
     specialisation = models.CharField(max_length=255)
@@ -94,7 +101,9 @@ class SpecialistProfile(models.Model):
     is_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    data_processing_consent_accepted_at = models.DateTimeField(null=True, blank=True)
+    data_processing_consent_accepted_at = models.DateTimeField(
+        null=True, blank=True
+    )
 
     class Meta:
         verbose_name = "Specialist Profile"

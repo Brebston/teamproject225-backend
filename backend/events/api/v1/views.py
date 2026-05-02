@@ -24,6 +24,7 @@ from events.models import (
     Category,
     EventImage,
 )
+from events.services import validate_event_images
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -46,21 +47,27 @@ class EventViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         images = request.FILES.getlist("images")
 
-        if len(images) > 6:
+        # VALIDATION
+        image_error = validate_event_images(images)
+        if image_error:
             return Response(
-                {"images": "Maximum 6 images allowed."},
+                {"images": image_error},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
         event = serializer.save(author=request.user)
 
+        # SAVE IMAGES
         for image in images:
+            image.seek(0)
             EventImage.objects.create(event=event, image=image)
 
-        response_serializer = self.get_serializer(event)
         return Response(
-            response_serializer.data, status=status.HTTP_201_CREATED
+            self.get_serializer(event).data,
+            status=status.HTTP_201_CREATED,
         )
 
     @action(
