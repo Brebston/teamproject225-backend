@@ -734,16 +734,10 @@ def get_user_avatar(user):
 Recommended queryset optimization:
 
 ```python
-Event.objects.select_related(
-    "author",
-    "author__profile",
-    "author__specialist_profile",
-    "category",
-).prefetch_related(
-    "images",
-    "likes",
-    "comments",
-).order_by("-created_at")
+Event.objects.all()
+.select_related("author", "category")
+.prefetch_related("images")
+.order_by("-created_at")
 ```
 
 For comments:
@@ -752,8 +746,6 @@ For comments:
 Comment.objects.select_related(
     "event",
     "user",
-    "user__profile",
-    "user__specialist_profile",
 ).prefetch_related("likes")
 ```
 
