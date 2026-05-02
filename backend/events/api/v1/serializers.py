@@ -16,6 +16,12 @@ class EventImageSerializer(serializers.ModelSerializer):
 
 
 class EventSerializer(serializers.ModelSerializer):
+    category_id = serializers.PrimaryKeyRelatedField(
+        queryset=Category.objects.all(),
+        write_only=True,
+        source="category",
+    )
+    category = CategorySerializer(read_only=True)
     images = EventImageSerializer(many=True, required=False)
     likes_count = serializers.IntegerField(
         source="likes.count", read_only=True
@@ -23,17 +29,22 @@ class EventSerializer(serializers.ModelSerializer):
     comments_count = serializers.IntegerField(
         source="comments.count", read_only=True
     )
+    author_name = serializers.CharField(
+        source="author.get_full_name", read_only=True
+    )
 
     class Meta:
         model = Event
         fields = [
             "id",
+            "category_id",
             "category",
             "title",
             "description",
             "images",
             "likes_count",
             "comments_count",
+            "author_name",
             "created_at",
         ]
 
@@ -44,8 +55,8 @@ class EventSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         images_data = validated_data.pop("images", [])
-        # request = self.context.get("request")
-        event = Event.objects.create(**validated_data)
+        request = self.context.get("request")
+        event = Event.objects.create(author=request.user, **validated_data)
 
         for image in images_data:
             EventImage.objects.create(event=event, **image)
