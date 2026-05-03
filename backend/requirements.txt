@@ -17,6 +17,7 @@ cryptography==46.0.7
 dj-rest-auth==7.2.0
 Django==6.0.4
 django-allauth==65.16.0
+django-filter==25.2
 django-phonenumber-field==8.4.0
 django-stubs==6.0.2
 django-stubs-ext==6.0.2

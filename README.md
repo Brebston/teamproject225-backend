@@ -647,21 +647,57 @@ Recommended validation rules:
 Recommended validation helper:
 
 ```python
+from PIL import Image
+
 MAX_EVENT_IMAGES = 6
 MAX_IMAGE_SIZE = 5 * 1024 * 1024
-ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"]
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+
+
+def _validate_images_count(images):
+    if len(images) > MAX_EVENT_IMAGES:
+        return f"Maximum {MAX_EVENT_IMAGES} images allowed."
+    return None
+
+
+def _validate_image_type(image):
+    if image.content_type not in ALLOWED_IMAGE_TYPES:
+        return "Only JPEG, PNG and WEBP images are allowed."
+    return None
+
+
+def _validate_image_size(image):
+    if image.size > MAX_IMAGE_SIZE:
+        return "Each image must be smaller than 5 MB."
+    return None
+
+
+def _validate_image_content(image):
+    try:
+        img = Image.open(image)
+        img.verify()
+    except Exception:
+        return "Invalid image file."
+    return None
 
 
 def validate_event_images(images):
-    if len(images) > MAX_EVENT_IMAGES:
-        return "Maximum 6 images allowed."
+    if not images:
+        return None
+
+    error = _validate_images_count(images)
+    if error:
+        return error
 
     for image in images:
-        if image.content_type not in ALLOWED_IMAGE_TYPES:
-            return "Only JPEG, PNG and WEBP images are allowed."
-
-        if image.size > MAX_IMAGE_SIZE:
-            return "Each image must be smaller than 5 MB."
+        for validator in (
+            _validate_image_type,
+            _validate_image_size,
+            _validate_image_content,
+        ):
+            error = validator(image)
+            if error:
+                return error
 
     return None
 ```
@@ -734,9 +770,17 @@ def get_user_avatar(user):
 Recommended queryset optimization:
 
 ```python
-Event.objects.all()
-.select_related("author", "category")
-.prefetch_related("images")
+Event.objects.select_related(
+  "author",
+  "author__profile",
+  "author__specialist_profile",
+  "category",
+  )
+.prefetch_related(
+  "images",
+  "likes",
+  "comments",
+)
 .order_by("-created_at")
 ```
 
@@ -751,41 +795,159 @@ Comment.objects.select_related(
 
 ---
 
-## Events Testing Checklist
+## Events Filtering, Search and Sorting
 
-Before merging Events app, test:
+### Overview
 
-- create category with image
-- list categories
-- update category
-- delete category
-- create event without images
-- create event with 1 image
-- create event with 6 images
-- try to create event with 7 images and expect `400 Bad Request`
-- try to upload unsupported file type and expect `400 Bad Request`
-- try to create event with description longer than 300 characters and expect `400 Bad Request`
-- regular user without specialist profile cannot create event
-- specialist profile user can create event
-- admin can create event
-- event author can update/delete own event
-- another user cannot update/delete someone else's event
-- public user can list and retrieve events
-- authenticated user can like event
-- repeated like request removes event like
-- authenticated user can create comment under event
-- public user can list comments under event
-- authenticated user can like comment
-- repeated like request removes comment like
-- comment response includes:
-  - commentator avatar
-  - commentator full name
-  - created time
-  - comment text
-  - likes count
+The Events API supports advanced filtering, searching, ordering, and pagination using `django-filter` and DRF built-in tools.
 
 ---
 
+### Filtering
+
+Filtering is implemented using `django-filter`.
+
+#### Available Filters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `category` | integer | Filter by category ID |
+| `author` | integer | Filter by author ID |
+| `created_after` | date | Events created after given date |
+| `created_before` | date | Events created before given date |
+
+#### Examples
+
+```http
+GET /api/v1/events/?category=1
+GET /api/v1/events/?author=5
+GET /api/v1/events/?created_after=2026-05-01
+GET /api/v1/events/?created_before=2026-04-01
+```
+
+---
+
+### Search
+
+Search is implemented using DRF `SearchFilter`.
+
+#### Fields
+
+- `title`
+- `description`
+
+#### Example
+
+```http
+GET /api/v1/events/?search=therapy
+```
+
+---
+
+### Ordering
+
+Ordering is implemented using DRF `OrderingFilter`.
+
+#### Available Fields
+
+- `created_at`
+
+#### Examples
+
+```http
+GET /api/v1/events/?ordering=-created_at
+GET /api/v1/events/?ordering=created_at
+```
+
+---
+
+### Pagination
+
+Pagination is enabled using DRF `PageNumberPagination`.
+
+Default page size:
+
+```text
+10 items per page
+```
+
+#### Example
+
+```http
+GET /api/v1/events/?page=2
+```
+
+---
+
+### Technical Implementation
+
+Filtering is powered by:
+
+- `DjangoFilterBackend`
+- `SearchFilter`
+- `OrderingFilter`
+
+Configured in `EventViewSet`:
+
+```python
+filter_backends = [
+    DjangoFilterBackend,
+    SearchFilter,
+    OrderingFilter,
+]
+
+filterset_class = EventFilter
+search_fields = ["title", "description"]
+ordering_fields = ["created_at"]
+ordering = ["-created_at"]
+```
+
+---
+
+### Important Notes
+
+- Query parameters must not contain trailing `/`
+- Example of incorrect request:
+
+```http
+GET /api/v1/events/?category=1/
+```
+
+- Correct request:
+
+```http
+GET /api/v1/events/?category=1
+```
+
+- If no records match filters, API returns:
+
+```json
+{
+  "count": 0,
+  "next": null,
+  "previous": null,
+  "results": []
+}
+```
+
+---
+
+### Performance Optimization
+
+Recommended queryset optimization:
+
+```python
+Event.objects.select_related(
+    "author",
+    "author__profile",
+    "author__specialist_profile",
+    "category",
+).prefetch_related(
+    "images",
+    "likes",
+    "comments",
+).order_by("-created_at")
+```
 # Password Reset (Django + DRF + Celery)
 
 ## Overview
@@ -1206,3 +1368,7 @@ python manage.py runserver
 - Event author is assigned automatically from `request.user`
 - Profile/document ownership is enforced via `request.user`
 - Related fields are read-only where users should not manually assign ownership
+
+
+---
+
