@@ -1,7 +1,9 @@
 from django.shortcuts import render
+from django_filters.rest_framework import DjangoFilterBackend
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
 
 from rest_framework.permissions import (
@@ -10,6 +12,7 @@ from rest_framework.permissions import (
 )
 from rest_framework.response import Response
 
+from events.api.v1.filters import EventFilter
 from events.api.v1.permissions import IsOwnerOrReadOnly, IsSpecialistOrAdmin
 from events.api.v1.serializers import (
     EventSerializer,
@@ -31,18 +34,36 @@ class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     parser_classes = [MultiPartParser, JSONParser, FormParser]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
 
 class EventViewSet(viewsets.ModelViewSet):
     queryset = (
-        Event.objects.all()
-        .select_related("author", "category")
-        .prefetch_related("images")
+        Event.objects.select_related(
+            "author",
+            "author__profile",
+            "author__specialist_profile",
+            "category",
+        )
+        .prefetch_related(
+            "images",
+            "likes",
+            "comments",
+        )
         .order_by("-created_at")
     )
     serializer_class = EventSerializer
     parser_classes = [MultiPartParser, JSONParser, FormParser]
     permission_classes = [IsSpecialistOrAdmin, IsOwnerOrReadOnly]
+    filter_backends = [
+        DjangoFilterBackend,
+        SearchFilter,
+        OrderingFilter,
+    ]
+    filterset_class = EventFilter
+    search_fields = ["title", "description"]
+    ordering_fields = ["created_at", "likes_count"]
+    ordering = ["-created_at"]
 
     def create(self, request, *args, **kwargs):
         images = request.FILES.getlist("images")
