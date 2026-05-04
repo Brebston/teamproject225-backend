@@ -3,8 +3,9 @@ import os
 from django.conf import settings
 from django.db import models
 
-from events.utils import get_user_full_name
-from profiles.models import build_file_path
+from phonenumber_field.modelfields import PhoneNumberField
+
+from profiles.models import build_file_path, Profile
 
 User = settings.AUTH_USER_MODEL
 
@@ -42,6 +43,7 @@ class Event(models.Model):
     author = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="events"
     )
+    max_participants = models.PositiveIntegerField(default=20)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -50,16 +52,16 @@ class Event(models.Model):
         verbose_name_plural = "Events"
 
     @property
-    def get_author_full_name(self):
-        return f"{self.author.first_name} {self.author.last_name}"
-
-    @property
     def likes_count(self):
         return self.likes.count()
 
     @property
     def comments_count(self):
         return self.comments.count()
+
+    @property
+    def registrations_count(self):
+        return self.registrations.count()
 
     def __str__(self):
         return self.title
@@ -136,3 +138,55 @@ class CommentLike(models.Model):
 
     def __str__(self):
         return f"{self.user} likes comment {self.comment.id}"
+
+
+class EventRegistration(models.Model):
+    class Experience(models.TextChoices):
+        PARENTS = "parents", "Parents"
+        TEACHER = "teacher", "Teacher"
+        PSYCHOLOGIST = "psychologist", "Psychologist"
+        TRAUMA_PEDAGOGY = "trauma_pedagogy", "Trauma pedagogy"
+        SOCIAL_WORKER = "social_worker", "Social worker"
+        OTHER = "other", "Other"
+
+    event = models.ForeignKey(
+        "Event",
+        on_delete=models.CASCADE,
+        related_name="registrations",
+    )
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="event_registrations",
+    )
+
+    full_name = models.CharField(max_length=255)
+    birth_date = models.DateField()
+    gender = models.CharField(
+        max_length=20,
+        choices=Profile.Gender.choices,
+        default=Profile.Gender.PREFER_NOT_TO_SAY,
+    )
+    phone = PhoneNumberField(region="UA")
+    email = models.EmailField()
+    experience = models.CharField(
+        max_length=50,
+        choices=Experience.choices,
+    )
+    eating_meat = models.BooleanField()
+    is_agreed = models.BooleanField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["event", "email"],
+                name="unique_event_email",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.full_name} → {self.event.title}"

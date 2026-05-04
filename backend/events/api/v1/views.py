@@ -1,4 +1,5 @@
-from django.shortcuts import render
+from django.db import transaction, IntegrityError
+from django.db.models import Count
 from django_filters.rest_framework import DjangoFilterBackend
 
 from rest_framework import viewsets, status
@@ -9,6 +10,7 @@ from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
 from rest_framework.permissions import (
     IsAuthenticated,
     IsAuthenticatedOrReadOnly,
+    AllowAny,
 )
 from rest_framework.response import Response
 
@@ -18,6 +20,7 @@ from events.api.v1.serializers import (
     EventSerializer,
     CommentSerializer,
     CategorySerializer,
+    EventRegistrationSerializer,
 )
 from events.models import (
     Event,
@@ -49,6 +52,12 @@ class EventViewSet(viewsets.ModelViewSet):
             "images",
             "likes",
             "comments",
+            "registrations",
+        )
+        .annotate(
+            likes_count_db=Count("likes", distinct=True),
+            comments_count_db=Count("comments", distinct=True),
+            registrations_count_db=Count("registrations", distinct=True),
         )
         .order_by("-created_at")
     )
@@ -62,7 +71,7 @@ class EventViewSet(viewsets.ModelViewSet):
     ]
     filterset_class = EventFilter
     search_fields = ["title", "description"]
-    ordering_fields = ["created_at", "likes_count"]
+    ordering_fields = ["created_at", "likes_count_db"]
     ordering = ["-created_at"]
 
     def create(self, request, *args, **kwargs):
@@ -130,9 +139,45 @@ class EventViewSet(viewsets.ModelViewSet):
             serializer = CommentSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             serializer.save(user=request.user, event=event)
-            return Response(serializer.data, status=201)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-        return Response({"detail": "Method Not Allowed"})
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[IsAuthenticated],
+    )
+    @transaction.atomic
+    def register(self, request, pk=None):
+        event = Event.objects.select_for_update().get(pk=pk)
+
+        if event.registrations.count() >= event.max_participants:
+
+            return Response(
+                {"detail": "Event is full"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = EventRegistrationSerializer(
+            data=request.data,
+        )
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            registration = serializer.save(
+                event=event,
+                user=request.user if request.user.is_authenticated else None,
+            )
+
+        except IntegrityError:
+            return Response(
+                {"detail": "You are already registered for this event"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(
+            EventRegistrationSerializer(registration).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class CommentViewSet(viewsets.ModelViewSet):
