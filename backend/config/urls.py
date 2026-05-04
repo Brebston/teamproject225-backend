@@ -30,6 +30,7 @@ from drf_spectacular.views import (
 
 from config import settings
 from config.services import health_check
+from config.settings import BASE_DIR
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -60,4 +61,9 @@ urlpatterns = [
         health_check,
         name="health-check",
     ),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]
+
+if settings.DEBUG:
+    urlpatterns += static(
+        settings.MEDIA_URL, document_root=settings.MEDIA_ROOT
+    )

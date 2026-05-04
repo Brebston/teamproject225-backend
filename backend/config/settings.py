@@ -154,7 +154,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 MEDIA_ROOT = BASE_DIR / "media"
 MEDIA_URL = "/media/"
@@ -198,7 +199,6 @@ SPECTACULAR_SETTINGS = {
 # OAuth
 
 # django.contrib.sites
-SITE_ID = 1
 
 REST_USE_JWT = True
 JWT_AUTH_COOKIE = None
