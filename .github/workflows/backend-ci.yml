@@ -35,7 +35,7 @@ jobs:
       github.event_name == 'workflow_dispatch'
 
     env:
-      IMAGE_NAME: wdoc-backend
+      IMAGE_NAME: wdoc-backend-test
       TRIVY_CACHE_DIR: /tmp/trivy-cache
     steps:
       - name: Checkout code
