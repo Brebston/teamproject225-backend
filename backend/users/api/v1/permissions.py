@@ -29,10 +29,13 @@ class IsOwnerOrStaff(BasePermission):
         ]:
             return True
 
-        if hasattr(obj, "user"):
-            return obj.user == request.user
-
         if hasattr(obj, "specialist"):
             return obj.specialist.user == request.user
+
+        if hasattr(obj, "user_profile"):
+            return obj.user_profile.user == request.user
+
+        if hasattr(obj, "user"):
+            return obj.user == request.user
 
         return False
