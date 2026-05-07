@@ -13,6 +13,7 @@ The project includes:
 - document uploads
 - media file support
 - Events app with categories, images, likes, comments, and comment likes
+- Scheduling app with slots & appointments
 - built-in OpenAPI documentation
 
 ---
@@ -24,6 +25,7 @@ The project includes:
 - [Users and Roles](#users-and-roles)
 - [Profiles and Documents](#profiles-and-documents)
 - [Events App](#events-app)
+- [Scheduling App](#scheduling-app)
 - [Password Reset](#password-reset-django--drf--celery)
 - [Google OAuth Login](#google-oauth-login)
 - [Media Support](#media-support)
@@ -1047,6 +1049,130 @@ Event.objects.select_related(
     "comments",
 ).order_by("-created_at")
 ```
+
+# Scheduling App
+
+### Overview
+
+Specialists can create availability slots, and users can book appointments.  
+Appointments are automatically marked as completed when their time has passed.
+
+---
+
+### Slots
+
+- Slots are 1 hour long, starting on the hour or half-hour
+- Only verified specialists can create slots
+- Unbooked future slots are visible to all users (for calendar display)
+
+#### Endpoints
+
+- `GET api/v1/scheduling/slots/` — list available slots (filter by `?specialist=<id>`)
+- `POST api/v1/scheduling/slots/bulk_create/` — create multiple slots (verified specialist only)
+- `DELETE api/v1/scheduling/slots/<id>/` — delete an unbooked slot (owner only)
+
+#### Bulk create example
+
+```json
+{
+  "start_times": [
+    "2025-06-01T10:00:00Z",
+    "2025-06-01T10:30:00Z"
+  ]
+}
+```
+
+---
+
+### Appointments
+
+- Only users with a profile can book appointments
+- Specialists can reschedule or cancel appointments
+- Appointments are automatically marked as `completed` once the slot time has passed
+
+#### Statuses
+
+- `confirmed` — active upcoming appointment
+- `cancelled` — cancelled by specialist or admin
+- `completed` — past appointment, auto-marked by the system
+
+#### Endpoints
+
+- `POST api/v1/scheduling/appointments/` — book an appointment (user only)
+- `GET api/v1/scheduling/appointments/` — list confirmed appointments
+- `GET api/v1/scheduling/appointments/<id>/` — retrieve appointment details
+- `PATCH api/v1/scheduling/appointments/<id>/reschedule/` — reschedule (specialist and admin only)
+- `PATCH api/v1/scheduling/appointments/<id>/cancel/` — cancel (specialist and admin only)
+- `GET api/v1/scheduling/appointments/completed/` — list completed appointments
+
+#### Sorting
+
+Both `/appointments/` and `/appointments/completed/` support sorting via query parameters:
+
+- `sort_field` — field to sort by, currently only `date` is supported
+- `sort_direction` — `asc` or `desc`; defaults to `asc` for confirmed, `desc` for completed
+
+Example:
+```
+GET /api/v1/scheduling/appointments/?sort_field=date&sort_direction=desc
+GET /api/v1/scheduling/appointments/completed/?sort_direction=asc
+```
+
+---
+
+### Date Filtering
+
+Appointments can be filtered by date using the `date` query parameter.
+
+Format: `YYYY-MM-DD`
+
+Example:
+
+```
+GET /api/v1/scheduling/appointments/?date=2026-06-10
+GET /api/v1/scheduling/appointments/completed/?date=2026-06-10
+```
+
+This returns all appointments (confirmed or completed) for the selected day.  
+Sorting and other filters (such as `user` for specialists) can be used together with the date filter.
+
+Example:
+
+```
+GET /api/v1/scheduling/appointments/?user=42&date=2026-06-10
+GET /api/v1/scheduling/appointments/?date=2026-06-10&sort_direction=desc
+```
+
+---
+
+### Role-based visibility
+
+- **User** — own appointments only
+- **Specialist** — their own appointments; can filter by `?user=<id>`
+- **Admin / Moderator** — all appointments
+
+---
+
+### Book again
+
+Completed appointments (user view) include a `book_again_url` field:
+
+```json
+{
+  "book_again_url": "/api/v1/scheduling/slots/?specialist=3"
+}
+```
+
+This URL returns the specialist's future available slots so the user can rebook.
+
+---
+
+### Celery task — cleanup
+
+A periodic task deletes unbooked past slots to keep the database clean.
+
+---
+
 # Password Reset (Django + DRF + Celery)
 
 ## Overview
@@ -1378,6 +1504,18 @@ teamproject225-backend/
 │   │   ├── utils.py
 │   │   ├── services.py
 │   │   └── models.py
+│   ├── scheduling/
+│   │  ├── migrations/
+│   │  ├── tests/
+│   │  ├── __init__.py
+│   │  ├── admin.py
+│   │  ├── apps.py
+│   │  ├── models.py
+│   │  ├── serializers.py
+│   │  ├── services.py
+│   │  ├── tasks.py
+│   │  ├── urls.py
+│   │  └── views.py
 │   ├── __init__.py
 │   ├── manage.py
 │   ├── .env.example

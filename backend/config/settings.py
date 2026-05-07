@@ -14,6 +14,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from celery.schedules import crontab
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -64,6 +65,7 @@ INSTALLED_APPS = [
     "users",
     "profiles.apps.ProfilesConfig",
     "events",
+    "scheduling"
 ]
 
 AUTH_USER_MODEL = "users.User"
@@ -246,3 +248,9 @@ CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = os.getenv(
     "CELERY_RESULT_BACKEND", "redis://localhost:6379/0"
 )
+CELERY_BEAT_SCHEDULE = {
+    "delete-unbooked-past-slots-nightly": {
+        "task": "scheduling.tasks.delete_unbooked_past_slots",
+        "schedule": crontab(hour=3, minute=0),
+    },
+}
