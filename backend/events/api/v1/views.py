@@ -11,11 +11,16 @@ from rest_framework.permissions import (
     IsAuthenticated,
     IsAuthenticatedOrReadOnly,
     AllowAny,
+    IsAdminUser,
 )
 from rest_framework.response import Response
 
 from events.api.v1.filters import EventFilter
-from events.api.v1.permissions import IsOwnerOrReadOnly, IsSpecialistOrAdmin
+from events.api.v1.permissions import (
+    IsOwnerOrReadOnly,
+    IsSpecialistOrAdmin,
+    IsOwnerOrAdmin,
+)
 from events.api.v1.serializers import (
     EventSerializer,
     CommentSerializer,
@@ -37,7 +42,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     parser_classes = [MultiPartParser, JSONParser, FormParser]
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAdminUser, IsOwnerOrReadOnly]
 
 
 class EventViewSet(viewsets.ModelViewSet):
@@ -183,7 +188,10 @@ class EventViewSet(viewsets.ModelViewSet):
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.select_related("event", "user")
     serializer_class = CommentSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
+    permission_classes = [
+        IsAuthenticatedOrReadOnly,
+        IsOwnerOrAdmin,
+    ]
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
