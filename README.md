@@ -507,14 +507,15 @@ def __str__(self):
 
 ### Events
 
-| Method | Endpoint | Description | Auth |
-|---|---|---|---|
-| `GET` | `/api/v1/events/` | List events | Public |
-| `POST` | `/api/v1/events/` | Create event | Specialist/Admin |
-| `GET` | `/api/v1/events/{id}/` | Retrieve event details | Public |
-| `PUT` | `/api/v1/events/{id}/` | Update event | Event author |
-| `PATCH` | `/api/v1/events/{id}/` | Partially update event | Event author |
-| `DELETE` | `/api/v1/events/{id}/` | Delete event | Event author |
+| Method | Endpoint                        | Description               | Auth |
+|---|---------------------------------|---------------------------|---|
+| `GET` | `/api/v1/events/`               | List events               | Public |
+| `POST` | `/api/v1/events/`               | Create event              | Specialist/Admin |
+| `POST` | `/api/v1/events/{id}/register/` | To register for the event | Authenticated |
+| `GET` | `/api/v1/events/{id}/`          | Retrieve event details    | Public |
+| `PUT` | `/api/v1/events/{id}/`          | Update event              | Event author |
+| `PATCH` | `/api/v1/events/{id}/`          | Partially update event    | Event author |
+| `DELETE` | `/api/v1/events/{id}/`          | Delete event              | Event author |
 
 ---
 
@@ -544,14 +545,17 @@ Response examples:
 
 | Method | Endpoint | Description | Auth |
 |---|---|---|---|
-| `GET` | `/api/v1/events/{id}/comments/` | List comments under event | Public |
-| `POST` | `/api/v1/events/{id}/comments/` | Create comment under event | Authenticated |
+| `GET` | `/api/v1/events/{event_pk}/comments/` | List comments under event | Public |
+| `POST` | `/api/v1/events/{event_pk}/comments/` | Create comment under event | Authenticated |
+| `GET` | `/api/v1/events/{event_pk}/comments/{id}/` | Retrieve comment details | Public |
+| `PUT` | `/api/v1/events/{event_pk}/comments/{id}/` | Fully update comment | Owner/Admin/Moderator |
+| `PATCH` | `/api/v1/events/{event_pk}/comments/{id}/` | Partially update comment | Owner/Admin/Moderator |
+| `DELETE` | `/api/v1/events/{event_pk}/comments/{id}/` | Delete comment | Owner/Admin/Moderator |
 
 Example request:
 
 ```json
 {
-  "event": 5,
   "text": "Great event!"
 }
 ```
@@ -578,7 +582,7 @@ Example response:
 
 | Method | Endpoint | Description | Auth |
 |---|---|---|---|
-| `POST` | `/api/v1/events/comments/{id}/like/` | Like/unlike comment | Authenticated |
+| `POST` | `/api/v1/events/{event_pk}/comments/{id}/like/` | Like/unlike comment | Authenticated |
 
 Response examples:
 
@@ -766,6 +770,101 @@ def get_user_avatar(user):
 ```
 
 ---
+
+## Event Registration
+
+The platform supports full event registration functionality with validation and ограничения.
+
+### Model: EventRegistration
+
+Each registration includes:
+
+- full_name
+- birth_date
+- gender (based on Profile.Gender)
+- phone (validated via `phonenumber_field`)
+- email
+- experience (enum):
+  - parents
+  - teacher
+  - psychologist
+  - trauma_pedagogy
+  - social_worker
+  - other
+- eating_meat (boolean)
+- is_agreed (GDPR / policy consent)
+
+### Constraints
+
+- Unique registration per event per email:
+```python
+UniqueConstraint(fields=["event", "email"])
+```
+
+### Relations
+
+- Event → registrations (reverse FK)
+- User → event_registrations (optional FK)
+
+### Business Logic
+
+- Limit participants via `Event.max_participants`
+- Use `registrations_count` property for quick aggregation
+- Validate:
+  - unique email per event
+  - consent (`is_agreed=True`)
+  - phone format
+- Allow both:
+  - authenticated users
+  - anonymous registrations
+
+### API (typical flow)
+
+#### Register for event
+
+`POST /api/v1/events/{id}/register/`
+
+Body:
+
+```json
+{
+  "full_name": "John Doe",
+  "birth_date": "1990-01-01",
+  "gender": "male",
+  "phone": "+380XXXXXXXXX",
+  "email": "john@example.com",
+  "experience": "teacher",
+  "eating_meat": true,
+  "is_agreed": true
+}
+```
+
+#### Expected validations
+
+- 400 if:
+  - already registered
+  - max participants reached
+  - invalid phone/email
+  - is_agreed = false
+
+#### Response
+
+```json
+{
+  "id": 1,
+  "event": 10,
+  "full_name": "John Doe",
+  "email": "john@example.com"
+}
+```
+
+### Notes
+
+- Prefer service layer for registration logic (avoid fat serializers)
+- Use atomic transactions when checking limits
+- Add DB index on `(event, email)` for performance
+- Consider soft limits / waiting list in future
+
 
 ## Events Performance Notes
 
@@ -1273,7 +1372,6 @@ http://127.0.0.1:8000/accounts/google/login/callback/
 Already configured:
 
 ```python
-SITE_ID = 1
 REST_USE_JWT = True
 ```
 
@@ -1509,4 +1607,3 @@ python manage.py runserver
 
 
 ---
-

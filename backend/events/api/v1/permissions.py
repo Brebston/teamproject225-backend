@@ -12,9 +12,22 @@ class IsOwnerOrReadOnly(BasePermission):
         )
 
 
-class IsSpecialistOrAdmin(BasePermission):
-    message = "Only specialists or admins can create events."
+class IsOwnerOrAdmin(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if request.method in SAFE_METHODS:
+            return True
 
+        user = request.user
+        if user.is_staff:
+            return True
+
+        if user.role == user.Roles.ADMIN:
+            return True
+
+        return False
+
+
+class IsSpecialistOrAdmin(BasePermission):
     def has_permission(self, request, view):
         if request.method in SAFE_METHODS:
             return True
@@ -24,6 +37,9 @@ class IsSpecialistOrAdmin(BasePermission):
             return False
 
         if user.is_staff:
+            return True
+
+        if user.role == user.Roles.ADMIN:
             return True
 
         if hasattr(user, "specialist_profile"):

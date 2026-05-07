@@ -55,5 +55,11 @@ class User(AbstractUser):
 
     objects = UserManager()
 
+    def save(self, *args, **kwargs):
+        self.is_staff = self.role == self.Roles.ADMIN
+        self.is_superuser = self.role == self.Roles.ADMIN
+
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.email

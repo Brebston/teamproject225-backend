@@ -63,7 +63,7 @@ INSTALLED_APPS = [
     "phonenumber_field",
     # Apps
     "users",
-    "profiles",
+    "profiles.apps.ProfilesConfig",
     "events",
     "scheduling"
 ]
