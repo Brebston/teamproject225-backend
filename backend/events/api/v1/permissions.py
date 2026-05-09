@@ -7,8 +7,8 @@ class IsOwnerOrReadOnly(BasePermission):
             return True
 
         return (
-            getattr(obj, "user", None) == request.user
-            or getattr(obj, "author", None) == request.user
+            obj.author == request.user
+            or request.user.role == request.user.Roles.ADMIN
         )
 
 
