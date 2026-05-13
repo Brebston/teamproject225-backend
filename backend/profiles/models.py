@@ -76,6 +76,7 @@ class Profile(models.Model):
     class Meta:
         verbose_name = "Profile"
         verbose_name_plural = "Profiles"
+        ordering = ["created_at"]
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
@@ -108,6 +109,7 @@ class SpecialistProfile(models.Model):
     class Meta:
         verbose_name = "Specialist Profile"
         verbose_name_plural = "Specialist Profiles"
+        ordering = ["created_at"]
 
     def __str__(self):
         return f"Specialist: {self.first_name} {self.last_name}"
@@ -133,6 +135,7 @@ class Document(models.Model):
     class Meta:
         verbose_name = "Document"
         verbose_name_plural = "Documents"
+        ordering = ["created_at"]
 
     def __str__(self):
         return f"{self.specialist} → {self.file.name} ({self.status})"
