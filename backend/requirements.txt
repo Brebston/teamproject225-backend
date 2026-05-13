@@ -15,7 +15,7 @@ click-repl==0.3.0
 colorama==0.4.6
 cryptography==46.0.7
 dj-rest-auth==7.2.0
-Django==6.0.4
+Django==6.0.5
 django-allauth==65.16.0
 django-filter==25.2
 django-phonenumber-field==8.4.0
@@ -66,6 +66,6 @@ typing_extensions==4.15.0
 tzdata==2026.1
 tzlocal==5.3.1
 uritemplate==4.2.0
-urllib3==2.6.3
+urllib3==2.7.0
 vine==5.1.0
 wcwidth==0.6.0
