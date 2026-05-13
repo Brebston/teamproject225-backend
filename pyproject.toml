@@ -4,3 +4,10 @@ target-version = ['py311']
 force-exclude = '''
 /migrations/
 '''
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "backend.config.settings"
+pythonpath = [
+    ".",
+    "backend"
+]
