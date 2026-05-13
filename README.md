@@ -31,6 +31,7 @@ The project includes:
 - [Media Support](#media-support)
 - [Project Structure](#project-structure-main-parts)
 - [How to Run](#how-to-run)
+- [Testing](#testing)
 - [Production Notes](#production-notes)
 - [Security Notes](#security-notes)
 
@@ -1483,6 +1484,7 @@ teamproject225-backend/
 │   │   └── social_adapter.py    # OAuth logic
 │   ├── profiles/
 │   │   ├── migrations/
+│   │   ├── tests/
 │   │   ├── __init__.py
 │   │   ├── admin.py
 │   │   ├── apps.py
@@ -1522,7 +1524,9 @@ teamproject225-backend/
 │   └── requirements.txt
 ├── .dockerignore
 ├── .gitignore
+├── conftest.py
 ├── Dockerfile
+├── pyproject.toml
 └── README.md
 ```
 
@@ -1576,6 +1580,29 @@ pip install -r requirements.txt
 python manage.py migrate
 python manage.py createsuperuser
 python manage.py runserver
+```
+
+---
+
+## Testing
+
+The project uses pytest with pytest-django for backend testing.
+
+### Configuration
+Test settings are defined in pyproject.toml.  
+A shared conftest.py at the project root provides common fixtures used across all apps.
+
+### Running Tests
+
+```bash
+# All tests
+pytest
+
+# Specific app
+pytest profiles/tests/
+
+# With output
+pytest -v
 ```
 
 ---
