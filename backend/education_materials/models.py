@@ -2,8 +2,9 @@ from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
-from django.utils.text import slugify
 from django_ckeditor_5.fields import CKEditor5Field
+
+from education_materials.api.v1.utils import generate_unique_slug
 
 User = settings.AUTH_USER_MODEL
 
@@ -46,7 +47,7 @@ class Article(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.title)
+            self.slug = generate_unique_slug(Article, self.title)
 
         super().save(*args, **kwargs)
 
@@ -60,7 +61,7 @@ class ArticleSection(models.Model):
     )
     order = models.PositiveIntegerField()
     title = models.CharField(max_length=255)
-    slug = models.SlugField(max_length=255)
+    slug = models.SlugField(max_length=255, blank=True)
     content = CKEditor5Field(config_name="extends")
 
     class Meta:
@@ -76,7 +77,7 @@ class ArticleSection(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.title)
+            self.slug = generate_unique_slug(ArticleSection, self.title)
 
         super().save(*args, **kwargs)
 

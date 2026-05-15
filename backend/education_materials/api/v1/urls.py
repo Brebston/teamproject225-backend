@@ -1,5 +1,17 @@
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 
-app_name = "education_materials"
+from education_materials.api.v1.views import (
+    ArticleViewSet,
+    ArticleCommentViewSet,
+)
 
-urlpatterns = []
+app_name = "education-materials"
+
+
+router = DefaultRouter()
+router.register("articles", ArticleViewSet, basename="articles")
+router.register("comments", ArticleCommentViewSet, basename="comments")
+urlpatterns = [
+    path("", include(router.urls)),
+]

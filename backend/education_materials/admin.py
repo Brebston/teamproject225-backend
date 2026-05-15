@@ -13,7 +13,6 @@ from education_materials.models import (
 class ArticleSectionInline(admin.StackedInline):
     model = ArticleSection
     extra = 1
-    prepopulated_fields = {"slug": ("title",)}
 
 
 @admin.register(Article)
@@ -28,7 +27,6 @@ class ArticleAdmin(admin.ModelAdmin):
     ]
     list_filter = ["status", "created_at", "published_at"]
     search_fields = ["title", "author__email"]
-    prepopulated_fields = {"slug": ("title",)}
     inlines = [
         ArticleSectionInline,
     ]
@@ -39,6 +37,7 @@ class ArticleAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     ]
+    exclude = ["slug"]
 
 
 admin.site.register(ArticleLike)

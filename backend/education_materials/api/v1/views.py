@@ -1,6 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Count
-from django.shortcuts import render
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import (
@@ -19,7 +18,13 @@ from education_materials.api.v1.serializers import (
     ArticleListSerializer,
     ArticleCommentSerializer,
 )
-from education_materials.models import Article, ArticleLike, Favorite
+from education_materials.models import (
+    Article,
+    ArticleLike,
+    Favorite,
+    ArticleComment,
+    ArticleCommentLike,
+)
 
 
 class ArticleViewSet(viewsets.ModelViewSet):
@@ -27,9 +32,9 @@ class ArticleViewSet(viewsets.ModelViewSet):
         Article.objects.select_related("author")
         .prefetch_related("sections", "likes", "comments")
         .annotate(
-            likes_count_db=Count("comments", distinct=True),
+            likes_count_db=Count("likes", distinct=True),
         )
-        .order_by("published_at", "-created_at")
+        .order_by("-published_at", "-created_at")
     )
     lookup_field = "slug"
     permission_classes = [
@@ -131,7 +136,7 @@ class ArticleViewSet(viewsets.ModelViewSet):
 
 class ArticleCommentViewSet(viewsets.ModelViewSet):
     queryset = (
-        Article.objects.select_related("article", "user")
+        ArticleComment.objects.select_related("article", "user")
         .annotate(likes_count=Count("likes", distinct=True))
         .order_by("-created_at")
     )
@@ -149,7 +154,7 @@ class ArticleCommentViewSet(viewsets.ModelViewSet):
     def like(self, request, slug=None):
         comment = self.get_object()
 
-        like, created = ArticleLike.objects.get_or_create(
+        like, created = ArticleCommentLike.objects.get_or_create(
             user=request.user, comment=comment
         )
 
