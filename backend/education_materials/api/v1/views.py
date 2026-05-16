@@ -1,5 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Count
+from django.db.models import Count, Q
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import (
@@ -7,6 +7,7 @@ from rest_framework.permissions import (
     IsAuthenticated,
 )
 from rest_framework.response import Response
+from rest_framework.exceptions import NotFound
 
 from education_materials.api.v1.permissions import (
     IsSpecialistOrAdminOrReadOnly,
@@ -28,20 +29,33 @@ from education_materials.models import (
 
 
 class ArticleViewSet(viewsets.ModelViewSet):
-    queryset = (
-        Article.objects.select_related("author")
-        .prefetch_related("sections", "likes", "comments")
-        .annotate(
-            likes_count_db=Count("likes", distinct=True),
-        )
-        .order_by("-published_at", "-created_at")
-    )
     lookup_field = "slug"
     permission_classes = [
         IsAuthenticatedOrReadOnly,
         IsSpecialistOrAdminOrReadOnly,
         IsAuthorOrAdminOrReadOnly,
     ]
+
+    def get_queryset(self):
+        queryset = (
+            Article.objects.select_related("author")
+            .prefetch_related(
+                "sections",
+            )
+            .order_by("-published_at", "-created_at")
+        )
+
+        user = self.request.user
+
+        if not user.is_authenticated:
+            return queryset.filter(status=Article.Status.PUBLISHED)
+
+        if user.role in ["admin", "moderator"]:
+            return queryset
+
+        return queryset.filter(
+            Q(status=Article.Status.PUBLISHED) | Q(author=user)
+        )
 
     def get_serializer_class(self):
         if self.action == "retrieve":
@@ -63,19 +77,33 @@ class ArticleViewSet(viewsets.ModelViewSet):
     def like(self, request, slug=None):
         article = self.get_object()
 
+        if article.status != Article.Status.PUBLISHED:
+            raise NotFound("Article not found")
+
         like, created = ArticleLike.objects.get_or_create(
-            user=request.user, article=article
+            user=request.user,
+            article=article,
         )
 
         if not created:
             like.delete()
-            article.likes_count = article.likes.count()
-            article.save(update_fields=["likes_count"])
-            return Response({"detail": "Article unliked"})
+            article.refresh_from_db()
 
-        article.likes_count = article.likes.count()
-        article.save(update_fields=["likes_count"])
-        return Response({"detail": "Article liked"})
+            return Response(
+                {
+                    "detail": "Article unliked",
+                    "likes_count": article.likes_count,
+                }
+            )
+
+        article.refresh_from_db()
+
+        return Response(
+            {
+                "detail": "Article liked",
+                "likes_count": article.likes_count,
+            }
+        )
 
     @action(
         detail=True,
@@ -84,6 +112,10 @@ class ArticleViewSet(viewsets.ModelViewSet):
     )
     def favorite(self, request, slug=None):
         article = self.get_object()
+
+        if article.status != Article.Status.PUBLISHED:
+            raise NotFound("Article not found")
+
         content_type = ContentType.objects.get_for_model(article)
 
         favourite, created = Favorite.objects.get_or_create(
@@ -116,9 +148,12 @@ class ArticleViewSet(viewsets.ModelViewSet):
     def comments(self, request, slug=None):
         article = self.get_object()
 
+        if article.status != Article.Status.PUBLISHED:
+            raise NotFound("Article not found")
+
         if request.method == "GET":
             comments = (
-                Article.objects.filter(article=article)
+                ArticleComment.objects.filter(article=article)
                 .select_related("user")
                 .annotate(likes_count=Count("likes", distinct=True))
                 .order_by("-created_at")
@@ -151,7 +186,7 @@ class ArticleCommentViewSet(viewsets.ModelViewSet):
         methods=["post"],
         permission_classes=[IsAuthenticated],
     )
-    def like(self, request, slug=None):
+    def like(self, request, pk=None):
         comment = self.get_object()
 
         like, created = ArticleCommentLike.objects.get_or_create(

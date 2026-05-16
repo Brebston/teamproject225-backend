@@ -59,10 +59,11 @@ class ArticleListSerializer(serializers.ModelSerializer):
         return user.favorites.filter(
             content_type__app_label=obj._meta.app_label,
             content_type__model=obj._meta.model_name,
+            object_id=obj.id,
         ).exists()
 
 
-class ArticleDetailSerializer(serializers.ModelSerializer):
+class ArticleDetailSerializer(ArticleListSerializer):
     sections = ArticleSectionSerializer(many=True, read_only=True)
 
     class Meta(ArticleListSerializer.Meta):

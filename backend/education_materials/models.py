@@ -1,7 +1,9 @@
 from django.conf import settings
+from django.contrib.auth.models import AbstractUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
+from django.utils.text import Truncator
 from django_ckeditor_5.fields import CKEditor5Field
 
 from education_materials.api.v1.utils import generate_unique_slug
@@ -102,6 +104,19 @@ class ArticleLike(models.Model):
             )
         ]
 
+    def __str__(self):
+        profile = getattr(self.user, "profile", None)
+        specialist = getattr(self.user, "specialist_profile", None)
+
+        if profile:
+            name = f"{profile.first_name} {profile.last_name}".strip()
+        elif specialist:
+            name = f"{specialist.first_name} {specialist.last_name}".strip()
+        else:
+            name = self.user.email
+
+        return f"{name} liked {self.article.title}"
+
 
 class ArticleComment(models.Model):
     article = models.ForeignKey(
@@ -116,6 +131,9 @@ class ArticleComment(models.Model):
     class Meta:
         verbose_name = "Article Comment"
         verbose_name_plural = "Article Comments"
+
+    def __str__(self):
+        return Truncator(self.content).chars(50)
 
 
 class ArticleCommentLike(models.Model):
@@ -134,6 +152,19 @@ class ArticleCommentLike(models.Model):
                 name="unique_article_comment_like",
             )
         ]
+
+    def __str__(self):
+        profile = getattr(self.user, "profile", None)
+        specialist = getattr(self.user, "specialist_profile", None)
+
+        if profile:
+            name = f"{profile.first_name} {profile.last_name}".strip()
+        elif specialist:
+            name = f"{specialist.first_name} {specialist.last_name}".strip()
+        else:
+            name = self.user.email
+
+        return f"{name} liked {self.comment.article.title}"
 
 
 class Favorite(models.Model):
@@ -155,3 +186,6 @@ class Favorite(models.Model):
                 name="unique_user_favorite",
             )
         ]
+
+    def __str__(self):
+        return f"{self.user.email} favorite {self.content_object}"

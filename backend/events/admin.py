@@ -67,9 +67,6 @@ class CommentAdmin(admin.ModelAdmin):
     ]
     search_fields = [
         "text",
-        "user__email",
-        "user__first_name",
-        "user__last_name",
     ]
 
     def user_full_name(self, obj):

@@ -67,7 +67,7 @@ INSTALLED_APPS = [
     "profiles.apps.ProfilesConfig",
     "events",
     "scheduling",
-    "education_materials",
+    "education_materials.apps.EducationMaterialsConfig",
 ]
 
 AUTH_USER_MODEL = "users.User"
