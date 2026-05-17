@@ -35,6 +35,7 @@ from users.api.v1.serializers import (
 from users.api.v1.permissions import IsAdminOrModerator, IsNotBlocked
 from users.services import block_user, change_user_role
 from users.api.v1.tasks import send_password_reset_email
+from config.metrics import LOGIN_SUCCESS, PASSWORD_RESET_REQUESTS
 
 
 class UserViewSet(ModelViewSet):
@@ -121,6 +122,14 @@ class LoginView(TokenObtainPairView):
     serializer_class = EmailTokenObtainSerializer
     permission_classes = [AllowAny]
 
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+
+        if response.status_code == status.HTTP_200_OK:
+            LOGIN_SUCCESS.inc()
+
+        return response
+
 
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
@@ -196,6 +205,8 @@ class PasswordResetRequestView(APIView):
             )
 
             send_password_reset_email.delay(user.email, reset_link)
+
+        PASSWORD_RESET_REQUESTS.inc()
 
         return Response(
             {"detail": "If this email exists, password reset link was sent."},

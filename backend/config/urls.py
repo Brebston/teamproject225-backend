@@ -29,11 +29,13 @@ from drf_spectacular.views import (
 )
 
 from config import settings
+from config.metrics import metrics_view
 from config.services import health_check
 from config.settings import BASE_DIR
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("metrics/", metrics_view, name="metrics"),
     path("api/v1/users/", include("users.api.v1.urls")),
     path("api/v1/profiles/", include("profiles.urls")),
     path("api/v1/events/", include("events.api.v1.urls")),
