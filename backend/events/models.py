@@ -2,6 +2,7 @@ import os
 
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 from phonenumber_field.modelfields import PhoneNumberField
 
@@ -112,6 +113,7 @@ class Comment(models.Model):
     text = models.TextField(max_length=300)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    edited_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         verbose_name = "Comment"
@@ -120,6 +122,12 @@ class Comment(models.Model):
     @property
     def likes_count(self):
         return self.likes.count()
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            self.edited_at = timezone.now()
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.user} -> {self.event}"

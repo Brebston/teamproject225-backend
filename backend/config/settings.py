@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.sites",
     "django_filters",
+    "django_ckeditor_5",
     # REST Framework
     "rest_framework",
     "rest_framework.authtoken",
@@ -65,7 +66,8 @@ INSTALLED_APPS = [
     "users",
     "profiles.apps.ProfilesConfig",
     "events",
-    "scheduling"
+    "scheduling",
+    "education_materials.apps.EducationMaterialsConfig",
 ]
 
 AUTH_USER_MODEL = "users.User"
@@ -252,5 +254,26 @@ CELERY_BEAT_SCHEDULE = {
     "delete-unbooked-past-slots-nightly": {
         "task": "scheduling.tasks.delete_unbooked_past_slots",
         "schedule": crontab(hour=3, minute=0),
+    },
+}
+
+
+# CKEditor
+CKEDITOR_5_CONFIGS = {
+    "extends": {
+        "toolbar": [
+            "heading",
+            "|",
+            "bold",
+            "italic",
+            "link",
+            "bulletedList",
+            "numberedList",
+            "blockQuote",
+            "imageUpload",
+            "|",
+            "undo",
+            "redo",
+        ],
     },
 }

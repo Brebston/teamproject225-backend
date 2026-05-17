@@ -52,7 +52,7 @@ class EventAdmin(admin.ModelAdmin):
     inlines = [EventRegistrationInline]
 
     def author_full_name(self, obj):
-        return get_user_full_name(obj.author)
+        return get_user_full_name(obj.user)
 
     author_full_name.short_description = "Author"
 
@@ -67,9 +67,6 @@ class CommentAdmin(admin.ModelAdmin):
     ]
     search_fields = [
         "text",
-        "user__email",
-        "user__first_name",
-        "user__last_name",
     ]
 
     def user_full_name(self, obj):

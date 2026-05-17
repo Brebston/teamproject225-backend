@@ -37,6 +37,10 @@ urlpatterns = [
     path("api/v1/users/", include("users.api.v1.urls")),
     path("api/v1/profiles/", include("profiles.urls")),
     path("api/v1/events/", include("events.api.v1.urls")),
+    path(
+        "api/v1/education-materials/",
+        include("education_materials.api.v1.urls"),
+    ),
     path("api/v1/scheduling/", include("scheduling.urls")),
     path(
         "api/v1/token/refresh/",
@@ -62,6 +66,7 @@ urlpatterns = [
         health_check,
         name="health-check",
     ),
+    path("ckeditor5/", include("django_ckeditor_5.urls")),
 ]
 
 if settings.DEBUG:

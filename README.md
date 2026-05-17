@@ -26,6 +26,7 @@ The project includes:
 - [Profiles and Documents](#profiles-and-documents)
 - [Events App](#events-app)
 - [Scheduling App](#scheduling-app)
+- [Education Materials App](#education-materials-app)
 - [Password Reset](#password-reset-django--drf--celery)
 - [Google OAuth Login](#google-oauth-login)
 - [Media Support](#media-support)
@@ -1173,6 +1174,369 @@ This URL returns the specialist's future available slots so the user can rebook.
 A periodic task deletes unbooked past slots to keep the database clean.
 
 ---
+
+# Education Materials App
+
+## Overview
+
+The Education Materials app provides functionality for:
+- educational articles with rich text sections
+- educational video materials
+- likes for articles and videos
+- comments for articles and videos
+- comment likes
+- favorites system using GenericForeignKey
+- role-based content management
+- draft/published moderation flow
+- automatic slug generation
+- automatic counters update via Django signals
+
+---
+
+## Education Materials Permissions
+
+### View Content
+
+- Everyone can view published articles and videos
+- Draft materials are visible only to:
+  - author
+  - admin
+  - moderator
+
+### Create Content
+
+Only:
+- `specialist`
+- `admin`
+- `moderator`
+
+can create:
+- articles
+- video materials
+
+### Edit/Delete Content
+
+Only:
+- content author
+- admin
+- moderator
+
+can update or delete materials.
+
+### Likes / Favorites / Comments
+
+Only authenticated users can:
+- like/unlike materials
+- add/remove favorites
+- create comments
+- like/unlike comments
+- edit own comments
+
+---
+
+## Article Model
+
+### Main Fields
+
+| Field | Type | Description |
+|---|---|---|
+| `author` | FK(User) | Article author |
+| `title` | CharField | Article title |
+| `slug` | SlugField | Auto-generated unique slug |
+| `cover_image` | ImageField | Article preview image |
+| `status` | CharField | draft / published |
+| `published_at` | DateTimeField | Publication datetime |
+| `likes_count` | PositiveIntegerField | Cached likes count |
+| `comments_count` | PositiveIntegerField | Cached comments count |
+| `favorites_count` | PositiveIntegerField | Cached favorites count |
+
+### Statuses
+
+```python
+class Status(models.TextChoices):
+    DRAFT = "draft"
+    PUBLISHED = "published"
+```
+
+### Slug Generation
+
+Slug is generated automatically from article title.
+
+Example:
+
+```text
+Mental Health Tips -> mental-health-tips
+```
+
+Implemented via:
+
+```python
+generate_unique_slug()
+```
+
+---
+
+## Article Sections
+
+Articles support multiple structured sections.
+
+### ArticleSection Fields
+
+| Field | Description |
+|---|---|
+| `article` | Related article |
+| `title` | Section title |
+| `slug` | Auto-generated section slug |
+| `content` | CKEditor rich text |
+| `order` | Display ordering |
+
+### Features
+
+- sections are ordered by `order`
+- section slug is generated automatically
+- suitable for frontend anchor navigation
+
+Example:
+
+```text
+/article/my-article/#introduction
+```
+
+---
+
+### Main Fields
+
+| Field | Type |
+|---|---|
+| `author` | FK(User) |
+| `title` | CharField |
+| `slug` | SlugField |
+| `short_description` | TextField |
+| `content` | CKEditor5Field |
+| `video_file` | FileField |
+| `status` | draft/published |
+| `published_at` | DateTimeField |
+| `likes_count` | PositiveIntegerField |
+| `comments_count` | PositiveIntegerField |
+| `favorites_count` | PositiveIntegerField |
+
+
+### Video Upload Validation
+
+Allowed formats:
+- mp4
+- mov
+- avi
+- mkv
+- webm
+
+Implemented using:
+
+```python
+FileExtensionValidator
+```
+
+---
+
+## Favorites System
+
+Favorites are implemented using Django Generic Relations.
+
+Supported content:
+- Article
+- VideoMaterial
+
+### Favorite Model
+
+| Field | Description |
+|---|---|
+| `user` | User who added favorite |
+| `content_type` | Django content type |
+| `object_id` | Related object id |
+| `content_object` | Generic relation |
+
+This allows one universal favorites table for multiple models.
+
+---
+
+## Signals
+
+The app uses Django signals for automatic counters synchronization.
+
+Implemented counters:
+- article likes
+- article comments
+- article favorites
+- video likes
+- video comments
+- video favorites
+
+Signals:
+- `post_save`
+- `post_delete`
+
+Example:
+
+```python
+@receiver(post_save, sender=ArticleLike)
+def article_like_created(sender, instance, **kwargs):
+    update_article_likes_count(instance.article)
+```
+
+---
+
+## Education Materials API Endpoints
+
+### Articles
+
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `GET` | `/api/v1/education-materials/articles/` | List published articles | Public |
+| `POST` | `/api/v1/education-materials/articles/` | Create article | Specialist/Admin/Moderator |
+| `GET` | `/api/v1/education-materials/articles/{slug}/` | Retrieve article details | Public |
+| `PATCH` | `/api/v1/education-materials/articles/{slug}/` | Partially update article | Author/Admin/Moderator |
+| `DELETE` | `/api/v1/education-materials/articles/{slug}/` | Delete article | Author/Admin/Moderator |
+
+---
+
+### Article Likes
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/v1/education-materials/articles/{slug}/like/` | Like/unlike article |
+
+Response:
+
+```json
+{
+  "detail": "Article liked",
+  "likes_count": 1
+}
+```
+
+---
+
+### Article Favorites
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/v1/education-materials/articles/{slug}/favorite/` | Add/remove favorite |
+
+---
+
+### Article Comments
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v1/education-materials/articles/{slug}/comments/` | List comments |
+| `POST` | `/api/v1/education-materials/articles/{slug}/comments/` | Create comment |
+
+---
+
+### Article Comment CRUD
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `PATCH` | `/api/v1/education-materials/article-comments/{id}/` | Edit comment |
+| `DELETE` | `/api/v1/education-materials/article-comments/{id}/` | Delete comment |
+
+---
+
+### Article Comment Likes
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/v1/education-materials/article-comments/{id}/like/` | Like/unlike article comment |
+
+---
+
+## Video Materials API
+
+### Videos
+
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `GET` | `/api/v1/education-materials/videos/` | List videos | Public |
+| `POST` | `/api/v1/education-materials/videos/` | Create video | Specialist/Admin/Moderator |
+| `GET` | `/api/v1/education-materials/videos/{slug}/` | Retrieve video details | Public |
+| `PATCH` | `/api/v1/education-materials/videos/{slug}/` | Partially update video | Author/Admin/Moderator |
+| `DELETE` | `/api/v1/education-materials/videos/{slug}/` | Delete video | Author/Admin/Moderator |
+
+---
+
+### Video Likes
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/v1/education-materials/videos/{slug}/like/` | Like/unlike video |
+
+---
+
+### Video Favorites
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/v1/education-materials/videos/{slug}/favorite/` | Add/remove favorite |
+
+---
+
+### Video Comments
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v1/education-materials/videos/{slug}/comments/` | List comments |
+| `POST` | `/api/v1/education-materials/videos/{slug}/comments/` | Create comment |
+
+---
+
+### Video Comment CRUD
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `PATCH` | `/api/v1/education-materials/video-comments/{id}/` | Edit video comment |
+| `DELETE` | `/api/v1/education-materials/video-comments/{id}/` | Delete video comment |
+
+---
+
+### Video Comment Likes
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/v1/education-materials/video-comments/{id}/like/` | Like/unlike video comment |
+
+---
+
+## Queryset Optimization
+
+Recommended queryset optimization:
+
+```python
+Article.objects.select_related(
+    "author",
+).prefetch_related(
+    "sections",
+)
+```
+
+```python
+VideoMaterial.objects.select_related(
+    "author",
+)
+```
+
+---
+
+## Admin Panel Improvements
+
+Implemented admin improvements:
+- read-only counters
+- automatic slug generation
+- truncated long comments
+- disabled manual editing for likes/favorites
+- custom verbose names
+- custom object string representation
+- inline article sections
+
 
 # Password Reset (Django + DRF + Celery)
 
