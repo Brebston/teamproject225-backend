@@ -86,8 +86,11 @@ def make_specialist_profile(user: User, verified: bool = False, **kwargs) -> Spe
 # Naming convention:
 #   user_*            — USER-role accounts
 #   specialist_*      — SPECIALIST-role accounts
+#   verified_*         — SPECIALIST account with a verified SpecialistProfile
+#   unverified_*       — SPECIALIST account with an unverified SpecialistProfile
 #   moderator_client  — authenticated moderator client
 #   admin_client      — authenticated admin client
+#   anon_client        — unauthenticated client
 #
 # Each fixture returns a simple namespace so tests can do:
 #   def test_foo(user_with_profile):
@@ -131,7 +134,7 @@ def admin_client(db):
     return _NS(user=user, client=make_client_for(user))
 
 
-# --- user with profile ---
+# --- user fixtures ---
 
 @pytest.fixture
 def user_with_profile(db):
@@ -141,12 +144,27 @@ def user_with_profile(db):
     return _NS(user=user, profile=profile, client=make_client_for(user))
 
 
+@pytest.fixture
+def user_without_profile(db):
+    """USER account with no Profile."""
+    user = make_user(email="noprofile@test.com")
+    return _NS(user=user, client=make_client_for(user))
+
 # --- specialist fixtures ---
 
 @pytest.fixture
 def specialist_with_profile(db):
     """SPECIALIST account with an *unverified* SpecialistProfile."""
     user = make_specialist()
+    profile = make_specialist_profile(user, verified=False)
+    return _NS(user=user, profile=profile, client=make_client_for(user))
+
+
+@pytest.fixture
+def unverified_specialist(db):
+    """Alias for specialist_with_profile — prefer this name when
+    the test is explicitly about the unverified state."""
+    user = make_specialist(email="unverified@test.com")
     profile = make_specialist_profile(user, verified=False)
     return _NS(user=user, profile=profile, client=make_client_for(user))
 
