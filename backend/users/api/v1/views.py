@@ -3,24 +3,9 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework.exceptions import PermissionDenied
-
-from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
-from allauth.socialaccount.providers.oauth2.client import OAuth2Client
-
-from dj_rest_auth.registration.views import SocialLoginView
-
-from profiles.serializers import (
-    ProfileDetailSerializer,
-    SpecialistProfileDetailSerializer,
-)
-from django.conf import settings
-from django.contrib.auth.tokens import PasswordResetTokenGenerator
-from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_encode
 
 from users.models import User
 from users.api.v1.serializers import (
@@ -29,12 +14,9 @@ from users.api.v1.serializers import (
     MeSerializer,
     RoleUpdateSerializer,
     EmailTokenObtainSerializer,
-    PasswordResetConfirmSerializer,
-    PasswordResetRequestSerializer,
 )
 from users.api.v1.permissions import IsAdminOrModerator, IsNotBlocked
 from users.services import block_user, change_user_role
-from users.api.v1.tasks import send_password_reset_email
 
 
 class UserViewSet(ModelViewSet):
@@ -61,14 +43,7 @@ class UserViewSet(ModelViewSet):
 
     @action(detail=False, methods=["get"])
     def me(self, request):
-        if hasattr(request.user, "specialist_profile"):
-            serializer = SpecialistProfileDetailSerializer(
-                request.user.specialist_profile
-            )
-        elif hasattr(request.user, "profile"):
-            serializer = ProfileDetailSerializer(request.user.profile)
-        else:
-            serializer = MeSerializer(request.user)
+        serializer = MeSerializer(request.user)
         return Response(serializer.data)
 
     @action(detail=True, methods=["post"])
@@ -99,10 +74,7 @@ class UserViewSet(ModelViewSet):
 
         new_role = serializer.validated_data["role"]
 
-        if (
-            request.user.role == user.Roles.MODERATOR
-            and new_role == user.Roles.ADMIN
-        ):
+        if request.user.role == user.Roles.MODERATOR and new_role == user.Roles.ADMIN:
             return Response(
                 {"error": "Moderator cannot assign admin role"},
                 status=status.HTTP_403_FORBIDDEN,
@@ -144,79 +116,3 @@ class LogoutView(APIView):
             return Response(
                 {"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST
             )
-
-
-class GoogleLoginView(SocialLoginView):
-    adapter_class = GoogleOAuth2Adapter
-    client_class = OAuth2Client
-    callback_url = f"{settings.FRONTEND_URL.rstrip('/')}/auth/google/callback"
-
-    def post(self, request, *args, **kwargs):
-        super().post(request, *args, **kwargs)
-
-        user = self.user
-
-        if user.is_blocked:
-            raise PermissionDenied("User is blocked")
-
-        refresh = RefreshToken.for_user(user)
-
-        return Response(
-            {
-                "user": {
-                    "id": user.id,
-                    "email": user.email,
-                    "first_name": user.first_name,
-                    "last_name": user.last_name,
-                },
-                "access": str(refresh.access_token),
-                "refresh": str(refresh),
-            },
-            status=status.HTTP_200_OK,
-        )
-
-
-class PasswordResetRequestView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        serializer = PasswordResetRequestSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        email = serializer.validated_data["email"]
-        user = User.objects.filter(email=email).first()
-
-        if user:
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
-            token = PasswordResetTokenGenerator().make_token(user)
-
-            reset_link = (
-                f"{settings.FRONTEND_URL.rstrip('/')}/password-reset/confirm/"
-                f"?uid={uid}&token={token}"
-            )
-
-            send_password_reset_email.delay(user.email, reset_link)
-
-        return Response(
-            {"detail": "If this email exists, password reset link was sent."},
-            status=status.HTTP_200_OK,
-        )
-
-
-class PasswordResetConfirmView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        serializer = PasswordResetConfirmSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        user = serializer.validated_data["user"]
-        password = serializer.validated_data["password"]
-
-        user.set_password(password)
-        user.save(update_fields=["password"])
-
-        return Response(
-            {"detail": "Password has been reset successfully."},
-            status=status.HTTP_200_OK,
-        )
