@@ -53,10 +53,11 @@ class AvailabilitySlotBulkCreateSerializer(serializers.Serializer):
         AvailabilitySlot.objects.bulk_create(slots, ignore_conflicts=True)
         return AvailabilitySlot.objects.filter(
             specialist=specialist,
-            start_time__in= validated_data["start_times"],
+            start_time__in=validated_data["start_times"],
         ).order_by("start_time")
 
 # ── Appointments ──────────────────────────────────────────────────────────────
+
 
 class AppointmentCreateSerializer(serializers.ModelSerializer):
     """User books a slot by providing its ID."""
