@@ -13,29 +13,16 @@ class IsNotBlocked(BasePermission):
     message = "Your account is blocked"
 
     def has_permission(self, request, view):
-        if not request.user or not request.user.is_authenticated:
+      if not request.user or not request.user.is_authenticated:
             return True
+        
+      return not request.user.is_blocked
+      
 
-        return not request.user.is_blocked
-
-
-class IsOwnerOrStaff(BasePermission):
-    """Object-level: only the owner or Admin/Moderator can read & write."""
-
+class IsOwner(BasePermission):
+    """Object-level: only the owner can write. Anyone authenticated can read."""
     def has_object_permission(self, request, view, obj):
-        if request.user.role in [
-            request.user.Roles.ADMIN,
-            request.user.Roles.MODERATOR,
-        ]:
+        if request.method in SAFE_METHODS:
             return True
-
-        if hasattr(obj, "specialist"):
-            return obj.specialist.user == request.user
-
-        if hasattr(obj, "user_profile"):
-            return obj.user_profile.user == request.user
-
-        if hasattr(obj, "user"):
-            return obj.user == request.user
-
-        return False
+        owner = getattr(obj, 'user', None) or getattr(obj.profile, 'user', None)
+        return owner == request.user
