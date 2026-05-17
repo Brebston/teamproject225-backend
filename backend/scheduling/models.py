@@ -50,10 +50,10 @@ class Appointment(models.Model):
         CANCELLED = "cancelled", "Cancelled"
         COMPLETED = "completed", "Completed"
 
-    slot = models.ForeignKey(
+    slot = models.OneToOneField(
         AvailabilitySlot,
         on_delete=models.CASCADE,
-        related_name="appointments",
+        related_name="appointment",
     )
     specialist = models.ForeignKey(
         SpecialistProfile,

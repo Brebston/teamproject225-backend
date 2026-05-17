@@ -1071,7 +1071,7 @@ Appointments are automatically marked as completed when their time has passed.
 
 - `GET api/v1/scheduling/slots/` — list available slots (filter by `?specialist=<id>`)
 - `POST api/v1/scheduling/slots/bulk_create/` — create multiple slots (verified specialist only)
-- `DELETE api/v1/scheduling/slots/<id>/` — delete an unbooked slot (owner and admin)
+- `DELETE api/v1/scheduling/slots/<id>/` — delete an unbooked slot (owner only)
 
 #### Bulk create example
 

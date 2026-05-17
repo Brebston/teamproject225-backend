@@ -49,15 +49,10 @@ class AvailabilitySlotBulkCreateSerializer(serializers.Serializer):
             )
             for dt in validated_data["start_times"]
         ]
+        return AvailabilitySlot.objects.bulk_create(slots, ignore_conflicts=True)
 
-        AvailabilitySlot.objects.bulk_create(slots, ignore_conflicts=True)
-        return AvailabilitySlot.objects.filter(
-            specialist=specialist,
-            start_time__in=validated_data["start_times"],
-        ).order_by("start_time")
 
 # ── Appointments ──────────────────────────────────────────────────────────────
-
 
 class AppointmentCreateSerializer(serializers.ModelSerializer):
     """User books a slot by providing its ID."""
@@ -192,17 +187,11 @@ class AppointmentRescheduleSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         request = self.context.get("request")
-        if not request:
-            return
-
-        from django.db.models import Q
-        user = request.user
-        qs = AvailabilitySlot.objects.filter(is_booked=False)
-
-        if hasattr(user, "specialist_profile"):
-            qs = qs.filter(specialist=user.specialist_profile)
-
-        self.fields["slot"].queryset = qs
+        if request and hasattr(request.user, "specialist_profile"):
+            self.fields["slot"].queryset = AvailabilitySlot.objects.filter(
+                specialist=request.user.specialist_profile,
+                is_booked=False,
+            )
 
     class Meta:
         model = Appointment
