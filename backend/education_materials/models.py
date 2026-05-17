@@ -222,7 +222,9 @@ class VideoMaterial(models.Model):
     short_description = models.TextField(max_length=300)
     video_file = models.FileField(
         upload_to="uploads/education_materials/video_materials",
-        validators=[FileExtensionValidator(["mp4", "avi", "mov", "webm"])],
+        validators=[
+            FileExtensionValidator(["mp4", "avi", "mov", "webm", "mkv"])
+        ],
     )
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.DRAFT
