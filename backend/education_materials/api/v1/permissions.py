@@ -11,7 +11,11 @@ class IsSpecialistOrAdminOrReadOnly(BasePermission):
         if not user or not user.is_authenticated:
             return False
 
-        return user.role in ["specialist", "admin", "moderator"]
+        return user.role in [
+            "specialist",
+            "admin",
+            "moderator",
+        ]
 
 
 class IsAuthorOrAdminOrReadOnly(BasePermission):
@@ -24,4 +28,13 @@ class IsAuthorOrAdminOrReadOnly(BasePermission):
         if not user or not user.is_authenticated:
             return False
 
-        return obj.author == user or user.role in ["admin", "moderator"]
+        owner = getattr(obj, "author", None) or getattr(
+            obj,
+            "user",
+            None,
+        )
+
+        return owner == user or user.role in [
+            "admin",
+            "moderator",
+        ]

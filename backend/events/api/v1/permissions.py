@@ -1,5 +1,7 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 
+from users.models import User
+
 
 class IsOwnerOrReadOnly(BasePermission):
     def has_object_permission(self, request, view, obj):
@@ -7,7 +9,7 @@ class IsOwnerOrReadOnly(BasePermission):
             return True
 
         return (
-            obj.author == request.user
+            obj.user == request.user
             or request.user.role == request.user.Roles.ADMIN
         )
 
@@ -17,14 +19,18 @@ class IsOwnerOrAdmin(BasePermission):
         if request.method in SAFE_METHODS:
             return True
 
-        user = request.user
-        if user.is_staff:
+        if request.user.role in [
+            User.Roles.ADMIN,
+            User.Roles.MODERATOR,
+        ]:
             return True
 
-        if user.role == user.Roles.ADMIN:
-            return True
-
-        return False
+        owner = getattr(obj, "author", None) or getattr(
+            obj,
+            "user",
+            None,
+        )
+        return owner == request.user
 
 
 class IsSpecialistOrAdmin(BasePermission):

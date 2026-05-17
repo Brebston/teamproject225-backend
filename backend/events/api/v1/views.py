@@ -4,6 +4,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
 
@@ -48,7 +49,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
 class EventViewSet(viewsets.ModelViewSet):
     queryset = (
         Event.objects.select_related(
-            "author",
+            "user",
             "author__profile",
             "author__specialist_profile",
             "category",
@@ -195,6 +196,14 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+    def perform_update(self, serializer):
+        if serializer.instance.is_deleted:
+            raise ValidationError(
+                {"detail": "Deleted comments cannot be edited"}
+            )
+
+        serializer.save()
 
     @action(
         detail=True, methods=["post"], permission_classes=[IsAuthenticated]

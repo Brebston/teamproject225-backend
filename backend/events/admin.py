@@ -52,7 +52,7 @@ class EventAdmin(admin.ModelAdmin):
     inlines = [EventRegistrationInline]
 
     def author_full_name(self, obj):
-        return get_user_full_name(obj.author)
+        return get_user_full_name(obj.user)
 
     author_full_name.short_description = "Author"
 
