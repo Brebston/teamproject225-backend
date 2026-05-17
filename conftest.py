@@ -152,6 +152,7 @@ def user_without_profile(db):
 
 # --- specialist fixtures ---
 
+
 @pytest.fixture
 def specialist_with_profile(db):
     """SPECIALIST account with an *unverified* SpecialistProfile."""
