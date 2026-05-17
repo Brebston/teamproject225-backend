@@ -5,7 +5,7 @@ from .models import AvailabilitySlot, Appointment
 
 @admin.register(AvailabilitySlot)
 class AvailabilitySlotAdmin(admin.ModelAdmin):
-    list_display = ["specialist", "start_time", "end_time", "is_booked", "created_at"]
+    list_display = ["id", "specialist", "start_time", "end_time", "is_booked", "created_at"]
     list_filter = ["is_booked", "specialist"]
     search_fields = ["specialist__first_name", "specialist__last_name"]
     ordering = ["start_time"]
@@ -15,6 +15,7 @@ class AvailabilitySlotAdmin(admin.ModelAdmin):
 @admin.register(Appointment)
 class AppointmentAdmin(admin.ModelAdmin):
     list_display = [
+        "id",
         "user_profile",
         "specialist",
         "get_start_time",

@@ -104,6 +104,7 @@ class AvailabilitySlotViewSet(
         serializer.is_valid(raise_exception=True)
         slots = serializer.save()
         out = AvailabilitySlotSerializer(slots, many=True)
+
         return Response(out.data, status=status.HTTP_201_CREATED)
 
 
@@ -285,6 +286,11 @@ class AppointmentViewSet(
         completed_qs = scoped.filter(status=Appointment.Status.COMPLETED)
         completed_qs = self._apply_date_filter(completed_qs)
         completed_qs = self._apply_sorting(completed_qs, default_direction="desc")
+
+        page = self.paginate_queryset(completed_qs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
 
         serializer = self.get_serializer(completed_qs, many=True)
 
