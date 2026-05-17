@@ -5,6 +5,7 @@ from django.contrib.auth.models import AbstractUser
 
 class UserManager(BaseUserManager):
     """Define a model manager for a User model with no username field."""
+
     use_in_migrations = True
 
     def create_user(self, email, password=None, **extra_fields):
@@ -42,12 +43,10 @@ class User(AbstractUser):
         ADMIN = "admin", "Admin"
 
     username = None
-    email = models.EmailField(unique=True)
+    email = models.EmailField(max_length=128, unique=True)
 
     role = models.CharField(
-        max_length=20,
-        choices=Roles.choices,
-        default=Roles.USER
+        max_length=20, choices=Roles.choices, default=Roles.USER
     )
     is_blocked = models.BooleanField(default=False)
 
@@ -55,6 +54,12 @@ class User(AbstractUser):
     REQUIRED_FIELDS = []
 
     objects = UserManager()
+
+    def save(self, *args, **kwargs):
+        self.is_staff = self.role == self.Roles.ADMIN
+        self.is_superuser = self.role == self.Roles.ADMIN
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.email

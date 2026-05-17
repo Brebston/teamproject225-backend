@@ -1,13 +1,15 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
-from rest_framework_simplejwt.serializers import (
-    TokenObtainPairSerializer,
-)
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.contrib.auth import get_user_model
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.utils.encoding import force_str
+from django.utils.http import urlsafe_base64_decode
 
-from users.models import User
+User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -19,7 +21,7 @@ class UserSerializer(serializers.ModelSerializer):
 class MeSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "email"]
+        fields = ["id", "email", "role"]
 
 
 class RoleUpdateSerializer(serializers.Serializer):
@@ -27,14 +29,29 @@ class RoleUpdateSerializer(serializers.Serializer):
 
 
 class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
+    password = serializers.CharField(
+        write_only=True, style={"input_type": "password"}
+    )
+    confirm_password = serializers.CharField(
+        write_only=True, style={"input_type": "password"}
+    )
+    role = serializers.ChoiceField(
+        choices=[
+            (User.Roles.USER, "User"),
+            (User.Roles.SPECIALIST, "Specialist"),
+        ]
+    )
 
     class Meta:
         model = User
-        fields = ["email", "password"]
+        fields = ["email", "password", "confirm_password", "role"]
 
     def validate(self, data):
-        user = User(email=data["email"])
+        user = User(email=data["email"], role=data["role"])
+        if data["password"] != data["confirm_password"]:
+            raise serializers.ValidationError(
+                {"confirm_password": "Passwords do not match"}
+            )
         try:
             validate_password(data["password"], user)
         except DjangoValidationError as e:
@@ -42,6 +59,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
+        validated_data.pop("confirm_password")
         return User.objects.create_user(**validated_data)
 
 
@@ -54,4 +72,51 @@ class EmailTokenObtainSerializer(TokenObtainPairSerializer):
         if self.user.is_blocked:
             raise AuthenticationFailed("User is blocked")
 
+        return data
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    uid = serializers.CharField()
+    token = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+    confirm_password = serializers.CharField(write_only=True)
+
+    def _validate_reset_token(self, data):
+        try:
+            user_id = force_str(urlsafe_base64_decode(data["uid"]))
+            user = User.objects.get(pk=user_id)
+        except (User.DoesNotExist, ValueError, TypeError, OverflowError):
+            raise serializers.ValidationError({"token": "Invalid reset link"})
+
+        if not PasswordResetTokenGenerator().check_token(user, data["token"]):
+            raise serializers.ValidationError(
+                {"token": "Invalid or expired token"}
+            )
+
+        return user
+
+    def _validate_passwords(self, data):
+        if data["password"] != data["confirm_password"]:
+            raise serializers.ValidationError(
+                {"confirm_password": "Passwords do not match"}
+            )
+
+    def _validate_password_strength(self, password, user):
+        try:
+            validate_password(password, user)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError({"password": e.messages})
+
+    def validate(self, data):
+        self._validate_passwords(data)
+
+        user = self._validate_reset_token(data)
+
+        self._validate_password_strength(data["password"], user)
+
+        data["user"] = user
         return data

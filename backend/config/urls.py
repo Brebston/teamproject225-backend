@@ -15,6 +15,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 from rest_framework_simplejwt.views import (
@@ -27,12 +28,28 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
+from config import settings
+from config.services import health_check
+from config.settings import BASE_DIR
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/users/", include("users.api.v1.urls")),
     path("api/v1/profiles/", include("profiles.urls")),
-    path("api/v1/token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
-    path("api/v1/token/verify/", TokenVerifyView.as_view(), name="token-verify"),
+    path("api/v1/events/", include("events.api.v1.urls")),
+    path(
+        "api/v1/education-materials/",
+        include("education_materials.api.v1.urls"),
+    ),
+    path("api/v1/scheduling/", include("scheduling.urls")),
+    path(
+        "api/v1/token/refresh/",
+        TokenRefreshView.as_view(),
+        name="token-refresh",
+    ),
+    path(
+        "api/v1/token/verify/", TokenVerifyView.as_view(), name="token-verify"
+    ),
     path("api/v1/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
         "api/v1/schema/swagger/",
@@ -44,4 +61,15 @@ urlpatterns = [
         SpectacularRedocView.as_view(url_name="schema"),
         name="redoc",
     ),
+    path(
+        "api/v1/health-check/",
+        health_check,
+        name="health-check",
+    ),
+    path("ckeditor5/", include("django_ckeditor_5.urls")),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(
+        settings.MEDIA_URL, document_root=settings.MEDIA_ROOT
+    )
