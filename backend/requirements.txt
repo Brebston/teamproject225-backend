@@ -39,6 +39,7 @@ phonenumbers==9.0.29
 pillow==12.2.0
 platformdirs==4.9.4
 prompt_toolkit==3.0.52
+prometheus_client==0.21.2
 psycopg==3.3.3
 psycopg-binary==3.3.3
 pycparser==3.0
