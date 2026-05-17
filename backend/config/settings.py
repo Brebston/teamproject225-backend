@@ -176,7 +176,7 @@ if USE_S3:
     AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "us-east-1")
     STATICFILES_STORAGE = "storages.backends.s3boto3.S3StaticStorage"
     DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
-    
+
     STATIC_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/static/"
     MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/media/"
     STATIC_ROOT = "static/"
@@ -266,7 +266,10 @@ USE_SES = os.getenv("USE_SES", "False").lower() == "true"
 if USE_SES:
     EMAIL_BACKEND = "django_ses.SESBackend"
     AWS_SES_REGION_NAME = os.getenv("AWS_SES_REGION_NAME", "us-east-1")
-    AWS_SES_REGION_ENDPOINT = os.getenv("AWS_SES_REGION_ENDPOINT", f"email.{AWS_SES_REGION_NAME}.amazonaws.com")
+    AWS_SES_REGION_ENDPOINT = os.getenv(
+        "AWS_SES_REGION_ENDPOINT",
+        f"email.{AWS_SES_REGION_NAME}.amazonaws.com",
+    )
     AWS_SES_ACCESS_KEY_ID = os.getenv("AWS_SES_ACCESS_KEY_ID")
     AWS_SES_SECRET_ACCESS_KEY = os.getenv("AWS_SES_SECRET_ACCESS_KEY")
     DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@example.com")

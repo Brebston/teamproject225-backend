@@ -6,8 +6,6 @@ class ProfilesConfig(AppConfig):
     name = "profiles"
 
     def ready(self):
-<<<<<<< Updated upstream
-        import profiles.signals
-=======
+        import profiles.signals  # noqa: F401
+
         from config import metrics  # noqa: F401
->>>>>>> Stashed changes
