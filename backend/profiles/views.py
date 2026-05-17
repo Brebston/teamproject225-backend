@@ -137,10 +137,12 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if user.role != user.Roles.SPECIALIST:
-            raise serializers.ValidationError(
-                {"detail": "Only specialists can upload documents."}
-            )
+        # as before verification the specialist's role is changed to user,
+        # we don't check the role here, only the specialist profile
+        # if user.role != user.Roles.SPECIALIST:
+        #     raise serializers.ValidationError(
+        #         {"detail": "Only specialists can upload documents."}
+        #     )
         specialist = getattr(user, "specialist_profile", None)
         if specialist is None:
             raise serializers.ValidationError(
