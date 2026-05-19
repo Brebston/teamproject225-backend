@@ -72,6 +72,7 @@ INSTALLED_APPS = [
     "allauth.socialaccount.providers.google",
     # Third‑party
     "phonenumber_field",
+    "storages",
     # Apps
     "users",
     "profiles.apps.ProfilesConfig",
@@ -171,19 +172,33 @@ USE_TZ = True
 # AWS S3 Configuration
 USE_S3 = os.getenv("USE_S3", "False").lower() == "true"
 
+# AWS Credentials
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+
 if USE_S3:
     AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME")
     AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "us-east-1")
+
+    # django-storages S3 Configuration
     STATICFILES_STORAGE = "storages.backends.s3boto3.S3StaticStorage"
     DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
-
-    STATIC_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/static/"
-    MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/media/"
+    
+    # S3 URL Configuration
+    AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com"
+    AWS_S3_URL_PROTOCOL = "https"
+    AWS_S3_ADDRESSING_STYLE = "virtual"
+    AWS_S3_SIGNATURE_VERSION = "s3v4"
+    AWS_DEFAULT_ACL = "public-read"
+    AWS_S3_FILE_OVERWRITE = False
+    
+    STATIC_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/static/"
+    MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/media/"
     STATIC_ROOT = "static/"
     MEDIA_ROOT = "media/"
 else:
     STATIC_URL = "/static/"
-    STATIC_ROOT = BASE_DIR / "staticfiles"
+    STATIC_ROOT = BASE_DIR / "static"
     MEDIA_ROOT = BASE_DIR / "media"
     MEDIA_URL = "/media/"
 
@@ -261,6 +276,7 @@ PASSWORD_RESET_TIMEOUT = 86400  # 24 hours
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
+# AWS SES Configuration
 USE_SES = os.getenv("USE_SES", "False").lower() == "true"
 
 if USE_SES:
@@ -270,8 +286,11 @@ if USE_SES:
         "AWS_SES_REGION_ENDPOINT",
         f"email.{AWS_SES_REGION_NAME}.amazonaws.com",
     )
-    AWS_SES_ACCESS_KEY_ID = os.getenv("AWS_SES_ACCESS_KEY_ID")
-    AWS_SES_SECRET_ACCESS_KEY = os.getenv("AWS_SES_SECRET_ACCESS_KEY")
+    # SES Configuration
+    AWS_SES_CONFIGURATION_SET = os.getenv("AWS_SES_CONFIGURATION_SET", None)
+    # Cache verification for 5 minutes
+    AWS_SES_VERIFY_EMAIL_ADDRESS = False
+    AWS_SES_DKIM_SIGNING = True
     DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@example.com")
 else:
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
