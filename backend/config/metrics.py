@@ -161,4 +161,3 @@ class PrometheusRequestMetricsMiddleware:
             return resolver_match.route
 
         return request.path
-
