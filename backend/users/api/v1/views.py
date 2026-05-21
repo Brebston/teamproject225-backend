@@ -35,7 +35,7 @@ from users.api.v1.serializers import (
 from users.api.v1.permissions import IsAdminOrModerator, IsNotBlocked
 from users.services import block_user, change_user_role
 from users.api.v1.tasks import send_password_reset_email
-from config.metrics import LOGIN_SUCCESS, PASSWORD_RESET_REQUESTS
+from config.metrics import LOGIN_FAILED, LOGIN_SUCCESS, PASSWORD_RESET_REQUESTS
 
 
 class UserViewSet(ModelViewSet):
@@ -127,6 +127,8 @@ class LoginView(TokenObtainPairView):
 
         if response.status_code == status.HTTP_200_OK:
             LOGIN_SUCCESS.inc()
+        else:
+            LOGIN_FAILED.inc()
 
         return response
 
@@ -159,6 +161,7 @@ class GoogleLoginView(SocialLoginView):
     adapter_class = GoogleOAuth2Adapter
     client_class = OAuth2Client
     callback_url = f"{settings.FRONTEND_URL.rstrip('/')}/auth/google/callback"
+    permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
         super().post(request, *args, **kwargs)
