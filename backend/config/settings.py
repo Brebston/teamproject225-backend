@@ -72,6 +72,7 @@ INSTALLED_APPS = [
     "allauth.socialaccount.providers.google",
     # Third‑party
     "phonenumber_field",
+    "storages",
     # Apps
     "users",
     "profiles.apps.ProfilesConfig",
@@ -91,6 +92,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "config.metrics.PrometheusRequestMetricsMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -171,21 +173,58 @@ USE_TZ = True
 # AWS S3 Configuration
 USE_S3 = os.getenv("USE_S3", "False").lower() == "true"
 
+
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+
 if USE_S3:
     AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME")
     AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "us-east-1")
-    STATICFILES_STORAGE = "storages.backends.s3boto3.S3StaticStorage"
-    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+    STORAGES = {
+        # Media files (user uploads)
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+            "OPTIONS": {
+                "location": "media",
+                "file_overwrite": False,
+            },
+        },
+        # Static files (CSS, JS)
+        "staticfiles": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+            "OPTIONS": {
+                "location": "static",
+                "default_acl": None,
+            },
+        },
+    }
 
-    STATIC_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/static/"
-    MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/media/"
-    STATIC_ROOT = "static/"
-    MEDIA_ROOT = "media/"
+    # S3 URL Configuration
+    AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com"
+    AWS_S3_URL_PROTOCOL = "https"
+    AWS_S3_ADDRESSING_STYLE = "virtual"
+    AWS_S3_SIGNATURE_VERSION = "s3v4"
+
+    # Security: signed URLs for media files (1 hour expiry)
+    AWS_QUERYSTRING_AUTH = True
+    AWS_QUERYSTRING_EXPIRE = 3600
+
+    STATIC_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/static/"
+    MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/media/"
 else:
+    # Local development storage
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
     STATIC_URL = "/static/"
-    STATIC_ROOT = BASE_DIR / "staticfiles"
-    MEDIA_ROOT = BASE_DIR / "media"
+    STATIC_ROOT = BASE_DIR / "static"
     MEDIA_URL = "/media/"
+    MEDIA_ROOT = BASE_DIR / "media"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
@@ -261,26 +300,16 @@ PASSWORD_RESET_TIMEOUT = 86400  # 24 hours
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
-USE_SES = os.getenv("USE_SES", "False").lower() == "true"
-
-if USE_SES:
-    EMAIL_BACKEND = "django_ses.SESBackend"
-    AWS_SES_REGION_NAME = os.getenv("AWS_SES_REGION_NAME", "us-east-1")
-    AWS_SES_REGION_ENDPOINT = os.getenv(
-        "AWS_SES_REGION_ENDPOINT",
-        f"email.{AWS_SES_REGION_NAME}.amazonaws.com",
-    )
-    AWS_SES_ACCESS_KEY_ID = os.getenv("AWS_SES_ACCESS_KEY_ID")
-    AWS_SES_SECRET_ACCESS_KEY = os.getenv("AWS_SES_SECRET_ACCESS_KEY")
-    DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@example.com")
-else:
-    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-    EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
-    EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
-    EMAIL_USE_TLS = True
-    EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
-    EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
-    DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+# SMTP configuration (provider-agnostic)
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.getenv("EMAIL_HOST", "")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "true").lower() == "true"
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "noreply@example.com"
+)
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = os.getenv(
