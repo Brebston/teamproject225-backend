@@ -88,8 +88,8 @@ class CommentSerializer(serializers.ModelSerializer):
     def get_user_full_name(self, obj):
         return get_user_full_name(obj.user)
 
-    def get_user_avatar(self, obj):
-        return get_user_avatar(obj.user)
+    def get_author_avatar(self, obj):
+        return get_author_avatar(obj.user)
 
 
 class EventRegistrationSerializer(serializers.ModelSerializer):
