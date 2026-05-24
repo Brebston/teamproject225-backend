@@ -1804,17 +1804,26 @@ POST /api/v1/users/google/
 
 ---
 
-## Media Support
+## File Storage
 
-- Added `MEDIA_ROOT` and `MEDIA_URL` to enable serving uploaded files
-- Added upload paths for:
-  - profile avatars
-  - specialist avatars
-  - specialist documents
-  - event category images
-  - event images
+The project supports two storage options:
 
-Uploaded files are stored under the `uploads/` directory with automatically generated filenames.
+- **Local (Development):** Files stored in `media/` and `static/` directories
+- **AWS S3 (Production):** Files stored in cloud S3 bucket
+
+To enable S3, set in `.env`:
+```bash
+USE_S3=True
+AWS_ACCESS_KEY_ID=your-key
+AWS_SECRET_ACCESS_KEY=your-secret
+AWS_STORAGE_BUCKET_NAME=your-bucket
+AWS_S3_REGION_NAME=us-east-1
+```
+
+Supported uploads:
+- User avatars
+- Specialist documents (PDF, images)
+- Event images
 
 ---
 
