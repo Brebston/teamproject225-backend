@@ -5,4 +5,4 @@ class UsersConfig(AppConfig):
     name = "users"
 
     def ready(self):
-        from config import metrics  # noqa: F401
+        from config import metrics

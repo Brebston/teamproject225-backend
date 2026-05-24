@@ -22,6 +22,7 @@ RUN sed -i 's/\r$//' /app/entrypoint.sh && \
     chmod +x /app/entrypoint.sh
 
 RUN useradd -m appuser && \
+    mkdir -p /app/static /app/media && \
     chown -R appuser:appuser /app
 
 USER appuser
