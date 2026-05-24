@@ -49,7 +49,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
 class EventViewSet(viewsets.ModelViewSet):
     queryset = (
         Event.objects.select_related(
-            "user",
+            "author",
             "author__profile",
             "author__specialist_profile",
             "category",
