@@ -14,13 +14,10 @@ def get_user_full_name(user):
     return user.email
 
 
-def get_user_avatar(user):
-    profile = getattr(user, "profile", None)
+def get_author_avatar(self, obj):
+    profile = getattr(obj.author, "profile", None)
+
     if profile and profile.avatar:
         return profile.avatar.url
-
-    specialist = getattr(user, "specialist_profile", None)
-    if specialist and specialist.avatar:
-        return specialist.avatar.url
 
     return None

@@ -8,8 +8,9 @@ class IsOwnerOrReadOnly(BasePermission):
         if request.method in SAFE_METHODS:
             return True
 
+        owner = getattr(obj, "author", None) or getattr(obj, "user", None)
         return (
-            obj.user == request.user
+            owner == request.user
             or request.user.role == request.user.Roles.ADMIN
         )
 
