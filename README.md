@@ -332,7 +332,7 @@ User favorites are returned from a separate authenticated endpoint.
 This is important because a registered user may not have a user profile yet. Favorites belong to the authenticated `User`, not to the `Profile` model. Therefore, the frontend should not depend on:
 
 ```http
-GET /api/v1/profiles/user-profiles/{id}/
+GET /api/v1/users/list/favorites/
 ```
 
 for the "Обране" tab if the goal is to show saved items for the currently logged-in user.
