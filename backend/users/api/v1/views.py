@@ -31,6 +31,7 @@ from users.api.v1.serializers import (
     EmailTokenObtainSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
+    UserFavoritesSerializer,
 )
 from users.api.v1.permissions import IsAdminOrModerator, IsNotBlocked
 from users.services import block_user, change_user_role
@@ -70,6 +71,19 @@ class UserViewSet(ModelViewSet):
             serializer = ProfileDetailSerializer(request.user.profile)
         else:
             serializer = MeSerializer(request.user)
+        return Response(serializer.data)
+
+    @action(
+        detail=False,
+        methods=["get"],
+        permission_classes=[IsAuthenticated],
+        url_path="favorites",
+    )
+    def my_favorites(self, request):
+        serializer = UserFavoritesSerializer(
+            instance={},
+            context={"request": request},
+        )
         return Response(serializer.data)
 
     @action(detail=True, methods=["post"])
