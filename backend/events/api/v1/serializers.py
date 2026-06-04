@@ -39,6 +39,7 @@ class EventSerializer(serializers.ModelSerializer):
     registrations_count = serializers.IntegerField(
         source="registrations_count_db", read_only=True
     )
+    favorites_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Event
@@ -54,6 +55,7 @@ class EventSerializer(serializers.ModelSerializer):
             "likes_count",
             "comments_count",
             "registrations_count",
+            "favorites_count",
             "max_participants",
             "created_at",
             "updated_at",
