@@ -1,17 +1,16 @@
 from django.db import transaction, IntegrityError
 from django.db.models import Count
 from django_filters.rest_framework import DjangoFilterBackend
+from django.contrib.contenttypes.models import ContentType
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
-
 from rest_framework.permissions import (
     IsAuthenticated,
     IsAuthenticatedOrReadOnly,
-    AllowAny,
     IsAdminUser,
 )
 from rest_framework.response import Response
@@ -37,6 +36,8 @@ from events.models import (
     EventImage,
 )
 from events.services import validate_event_images
+
+from education_materials.models import Favorite
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -183,6 +184,36 @@ class EventViewSet(viewsets.ModelViewSet):
         return Response(
             EventRegistrationSerializer(registration).data,
             status=status.HTTP_201_CREATED,
+        )
+
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[IsAuthenticated],
+    )
+    def favorite(self, request, pk=None):
+        event = self.get_object()
+
+        content_type = ContentType.objects.get_for_model(event)
+        favorite, created = Favorite.objects.get_or_create(
+            user=request.user, content_type=content_type, object_id=event.id
+        )
+
+        if not created:
+            favorite.delete()
+            event.refresh_from_db()
+            return Response(
+                {
+                    "detail": "Event removed from favorites.",
+                    "favorites_count": event.favorites_count,
+                }
+            )
+        event.refresh_from_db()
+        return Response(
+            {
+                "detail": "Event added to favorites.",
+                "favorites_count": event.favorites_count,
+            }
         )
 
 

@@ -6,3 +6,4 @@ class EventsConfig(AppConfig):
 
     def ready(self):
         from config import metrics  # noqa: F401
+        import events.signals  # noqa: F401

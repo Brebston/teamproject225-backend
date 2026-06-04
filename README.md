@@ -1869,6 +1869,7 @@ teamproject225-backend/
 │   │   ├── api/
 │   │   │   └── v1/
 │   │   │       ├── permissions.py
+│   │   │       ├── filters.py
 │   │   │       ├── serializers.py
 │   │   │       ├── urls.py
 │   │   │       └── views.py
@@ -1878,6 +1879,7 @@ teamproject225-backend/
 │   │   ├── apps.py
 │   │   ├── utils.py
 │   │   ├── services.py
+│   │   ├── signals.py
 │   │   └── models.py
 │   ├── scheduling/
 │   │  ├── migrations/
