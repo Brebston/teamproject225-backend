@@ -2042,12 +2042,12 @@ teamproject225-backend/
 │   │   │       ├── filters.py
 │   │   │       ├── serializers.py
 │   │   │       ├── urls.py
+│   │   │       ├── utils.py
 │   │   │       └── views.py
 │   │   ├── migrations/
 │   │   ├── __init__.py
 │   │   ├── admin.py
 │   │   ├── apps.py
-│   │   ├── utils.py
 │   │   ├── services.py
 │   │   ├── signals.py
 │   │   └── models.py
