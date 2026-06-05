@@ -9,6 +9,14 @@ from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 
+from education_materials.api.v1.serializers import (
+    ArticleListSerializer,
+    VideoMaterialListSerializer,
+)
+from education_materials.models import Favorite, Article, VideoMaterial
+from events.api.v1.serializers import EventSerializer
+from events.models import Event
+
 User = get_user_model()
 
 
@@ -120,3 +128,46 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 
         data["user"] = user
         return data
+
+
+class UserFavoritesSerializer(serializers.Serializer):
+    articles = serializers.SerializerMethodField()
+    videos = serializers.SerializerMethodField()
+    events = serializers.SerializerMethodField()
+
+    def _get_favorites(self):
+        user = self.context["request"].user
+        return Favorite.objects.filter(user=user).select_related(
+            "content_type"
+        )
+
+    def get_articles(self, obj):
+        articles = []
+
+        for favorite in self._get_favorites():
+            if isinstance(favorite.content_object, Article):
+                articles.append(favorite.content_object)
+
+        return ArticleListSerializer(
+            articles, many=True, context=self.context
+        ).data
+
+    def get_videos(self, obj):
+        videos = []
+
+        for favorite in self._get_favorites():
+            if isinstance(favorite.content_object, VideoMaterial):
+                videos.append(favorite.content_object)
+
+        return VideoMaterialListSerializer(
+            videos, many=True, context=self.context
+        ).data
+
+    def get_events(self, obj):
+        events = []
+
+        for favorite in self._get_favorites():
+            if isinstance(favorite.content_object, Event):
+                events.append(favorite.content_object)
+
+        return EventSerializer(events, many=True, context=self.context).data

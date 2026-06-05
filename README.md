@@ -12,7 +12,8 @@ The project includes:
 - user and specialist profiles
 - document uploads
 - media file support
-- Events app with categories, images, likes, comments, and comment likes
+- Events app with categories, images, likes, favorites, comments, and comment likes
+- Unified user favorites for events and education materials
 - Scheduling app with slots & appointments
 - built-in OpenAPI documentation
 
@@ -24,6 +25,7 @@ The project includes:
 - [Authentication](#authentication)
 - [Users and Roles](#users-and-roles)
 - [Profiles and Documents](#profiles-and-documents)
+- [User Favorites](#user-favorites)
 - [Events App](#events-app)
 - [Scheduling App](#scheduling-app)
 - [Education Materials App](#education-materials-app)
@@ -239,6 +241,7 @@ Custom endpoints:
 - document management for specialist profiles
 - CRUD endpoints for profiles and specialist profiles
 - document upload and deletion endpoints
+- separate endpoint for current user favorites
 
 ### Profile Changes
 
@@ -320,6 +323,85 @@ specialist = serializers.EmailField(source="specialist.user.email", read_only=Tr
 
 ---
 
+# User Favorites
+
+## Overview
+
+User favorites are returned from a separate authenticated endpoint.
+
+This is important because a registered user may not have a user profile yet. Favorites belong to the authenticated `User`, not to the `Profile` model. Therefore, the frontend should not depend on:
+
+```http
+GET /api/v1/users/list/favorites/
+```
+
+for the "Обране" tab if the goal is to show saved items for the currently logged-in user.
+
+Instead, the frontend should use the current-user favorites endpoint.
+
+## Supported Favorite Content
+
+The favorites system supports:
+- events
+- educational articles
+- educational video materials
+
+The system is based on the existing `Favorite` model from `education_materials`, which uses Django `ContentType` and `GenericForeignKey`.
+
+This allows one universal favorites table to store different content types.
+
+## User Favorites Endpoint
+
+| Method | Endpoint                          | Description | Auth |
+|---|-----------------------------------|---|---|
+| `GET` | `/api/v1/users/list/favorites/` | List current authenticated user's saved events and education materials | Authenticated |
+
+## Response Example
+
+```json
+{
+  "events": [],
+  "articles": [],
+  "videos": []
+}
+```
+
+If the user added an event to favorites, it appears in `events`.
+
+If the user added an article to favorites, it appears in `articles`.
+
+If the user added a video material to favorites, it appears in `videos`.
+
+## Frontend Usage
+
+The profile page tab "Favorites" should request:
+
+```http
+GET /api/v1/users/list/favorites/
+```
+
+Headers:
+
+```http
+Authorization: Bearer <access_token>
+```
+
+Frontend should show the empty-state text only when all lists are empty:
+
+```text
+events.length === 0
+articles.length === 0
+videos.length === 0
+```
+
+## Important Notes
+
+- The endpoint works even if the authenticated user has not created a `Profile` yet.
+- The endpoint uses `request.user`, so users cannot request another user's favorites by changing an id.
+- This endpoint is better for the profile "Обране" tab than `/api/v1/profiles/user-profiles/{id}/`.
+
+---
+
 # Events App
 
 ## Overview
@@ -329,6 +411,7 @@ The Events app provides functionality for:
 - events with up to 6 images
 - event description limited to 300 characters
 - event likes
+- event favorites
 - comments under events
 - comment likes
 - displaying commentator avatar
@@ -370,10 +453,11 @@ from rest_framework.permissions import IsAdminUser
 permission_classes = [IsAdminUser]
 ```
 
-### Likes and Comments
+### Likes, Favorites and Comments
 
 Only authenticated users can:
 - like/unlike events
+- add/remove events from favorites
 - create comments
 - like/unlike comments
 
@@ -399,6 +483,7 @@ Fields:
 - `description`
 - `category`
 - `author`
+- `favorites_count`
 - `created_at`
 - `updated_at`
 
@@ -410,6 +495,7 @@ Rules:
 Computed fields:
 - `likes_count`
 - `comments_count`
+- `favorites_count`
 
 ---
 
@@ -453,6 +539,25 @@ def __str__(self):
 
     return f"{name} liked {self.event.title}"
 ```
+
+---
+
+### Event Favorites
+
+Event favorites use the shared `Favorite` model from `education_materials`.
+
+Fields used by the generic favorite relation:
+- `user`
+- `content_type`
+- `object_id`
+- `content_object`
+
+Rules:
+- one user can add one event to favorites only once
+- repeated favorite request works as toggle:
+  - first request adds event to favorites
+  - second request removes event from favorites
+- `Event.favorites_count` stores cached number of users who added the event to favorites
 
 ---
 
@@ -514,6 +619,7 @@ def __str__(self):
 | `GET` | `/api/v1/events/`               | List events               | Public |
 | `POST` | `/api/v1/events/`               | Create event              | Specialist/Admin |
 | `POST` | `/api/v1/events/{id}/register/` | To register for the event | Authenticated |
+| `POST` | `/api/v1/events/{id}/favorite/` | Add/remove event from favorites | Authenticated |
 | `GET` | `/api/v1/events/{id}/`          | Retrieve event details    | Public |
 | `PUT` | `/api/v1/events/{id}/`          | Update event              | Event author |
 | `PATCH` | `/api/v1/events/{id}/`          | Partially update event    | Event author |
@@ -540,6 +646,62 @@ Response examples:
   "detail": "Event unliked"
 }
 ```
+
+---
+
+### Event Favorites
+
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `POST` | `/api/v1/events/{id}/favorite/` | Add/remove event from favorites | Authenticated |
+
+Response examples:
+
+```json
+{
+  "detail": "Event added to favorites.",
+  "favorites_count": 1
+}
+```
+
+```json
+{
+  "detail": "Event removed from favorites.",
+  "favorites_count": 0
+}
+```
+
+### How Event Favorites Work
+
+Event favorites use the same logic as education material favorites:
+
+```python
+content_type = ContentType.objects.get_for_model(event)
+
+favorite, created = Favorite.objects.get_or_create(
+    user=request.user,
+    content_type=content_type,
+    object_id=event.id,
+)
+```
+
+If the favorite already exists, it is deleted.
+
+If it does not exist, it is created.
+
+After create/delete, `favorites_count` is returned without calling it as a method:
+
+```python
+event.favorites_count
+```
+
+Do not use:
+
+```python
+event.favorites_count()
+```
+
+because `favorites_count` is an integer field, not a method.
 
 ---
 
@@ -1345,6 +1507,7 @@ Favorites are implemented using Django Generic Relations.
 Supported content:
 - Article
 - VideoMaterial
+- Event
 
 ### Favorite Model
 
@@ -1356,6 +1519,8 @@ Supported content:
 | `content_object` | Generic relation |
 
 This allows one universal favorites table for multiple models.
+
+Events reuse the same favorite system instead of creating a separate `EventFavorite` model.
 
 ---
 
@@ -1370,6 +1535,7 @@ Implemented counters:
 - video likes
 - video comments
 - video favorites
+- event favorites
 
 Signals:
 - `post_save`
@@ -1418,9 +1584,11 @@ Response:
 
 ### Article Favorites
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/v1/education-materials/articles/{slug}/favorite/` | Add/remove favorite |
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `POST` | `/api/v1/education-materials/articles/{slug}/favorite/` | Add/remove favorite | Authenticated |
+
+Response includes updated `favorites_count`.
 
 ---
 
@@ -1474,9 +1642,11 @@ Response:
 
 ### Video Favorites
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/v1/education-materials/videos/{slug}/favorite/` | Add/remove favorite |
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `POST` | `/api/v1/education-materials/videos/{slug}/favorite/` | Add/remove favorite | Authenticated |
+
+Response includes updated `favorites_count`.
 
 ---
 
@@ -2005,6 +2175,7 @@ pytest -v
 - The maximum password length is 128 characters
 - Event author is assigned automatically from `request.user`
 - Profile/document ownership is enforced via `request.user`
+- User favorites are resolved from `request.user`, not from profile id
 - Related fields are read-only where users should not manually assign ownership
 
 
