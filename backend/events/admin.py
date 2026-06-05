@@ -9,7 +9,7 @@ from events.models import (
     CommentLike,
     EventRegistration,
 )
-from events.utils import get_user_full_name
+from events.api.v1.utils import get_user_full_name
 
 
 class EventImageInline(admin.TabularInline):
@@ -105,5 +105,33 @@ class EventRegistrationAdmin(admin.ModelAdmin):
     readonly_fields = ("created_at",)
 
 
-admin.site.register(EventLike)
-admin.site.register(CommentLike)
+@admin.register(EventLike)
+class EventLikeAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "user",
+        "event",
+    )
+    readonly_fields = (
+        "user",
+        "event",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+
+@admin.register(CommentLike)
+class CommentLikeAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "user",
+        "comment",
+    )
+    readonly_fields = (
+        "user",
+        "comment",
+    )
+
+    def has_add_permission(self, request):
+        return False

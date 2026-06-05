@@ -7,7 +7,7 @@ from events.models import (
     Comment,
     EventRegistration,
 )
-from events.utils import get_user_full_name, get_author_avatar
+from events.api.v1.utils import get_user_full_name, get_author_avatar
 
 
 class CategorySerializer(serializers.ModelSerializer):
