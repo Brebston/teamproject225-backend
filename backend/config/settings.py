@@ -179,15 +179,11 @@ AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 if USE_S3:
     AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME")
     AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "us-east-1")
- 
     AWS_QUERYSTRING_AUTH = False
     AWS_S3_ADDRESSING_STYLE = "virtual"
- 
     AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com"
- 
     MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/media/"
     MEDIA_ROOT = BASE_DIR / "media"
- 
     STORAGES = {
         "default": {
             "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
